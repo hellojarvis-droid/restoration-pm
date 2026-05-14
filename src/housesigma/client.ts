@@ -1,6 +1,24 @@
+import {
+  constants as cryptoConstants,
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  publicEncrypt,
+  randomBytes,
+} from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { gunzipSync, inflateRawSync, inflateSync } from "node:zlib";
 import { request } from "undici";
-import { ENDPOINTS } from "./endpoints.js";
+import {
+  API_BASE,
+  API_SALT,
+  CLIENT_TYPE,
+  CLIENT_VERSION,
+  ENCRYPTED_ENDPOINTS,
+  ENDPOINTS,
+  PEM_PUBLIC_KEY,
+  SIGNED_ENDPOINTS,
+} from "./endpoints.js";
 import type {
   HSEnvelope,
   HouseSigmaConfig,
@@ -10,7 +28,7 @@ import type {
   HSListingHistoryEntry,
 } from "./types.js";
 
-const DEFAULT_HEADERS = {
+const DEFAULT_HEADERS: Record<string, string> = {
   "accept": "application/json, text/plain, */*",
   "accept-language": "en-US,en;q=0.9",
   "content-type": "application/json",
@@ -19,6 +37,8 @@ const DEFAULT_HEADERS = {
   "user-agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "HS-Client-Type": CLIENT_TYPE,
+  "HS-Client-Version": CLIENT_VERSION,
 };
 
 export class HouseSigmaError extends Error {
@@ -35,6 +55,8 @@ export class HouseSigmaError extends Error {
 
 export class HouseSigmaClient {
   private session: SessionState | null = null;
+  private guestToken: string | null = null;
+  private secretKey: string | null = null;
 
   constructor(private readonly cfg: HouseSigmaConfig) {}
 
@@ -42,7 +64,11 @@ export class HouseSigmaClient {
     if (this.session?.token) return this.session;
 
     if (this.cfg.token) {
-      this.session = { token: this.cfg.token };
+      // Token override: we still need a fresh secret_key for encrypted
+      // endpoints, since each accesstoken/new mints a new key. Bootstrap
+      // to pull one, but use the supplied token for user auth.
+      await this.ensureGuestToken();
+      this.session = { token: this.cfg.token, secretKey: this.secretKey ?? undefined };
       return this.session;
     }
 
@@ -50,6 +76,7 @@ export class HouseSigmaClient {
       const loaded = await this.loadSession(this.cfg.sessionFile);
       if (loaded) {
         this.session = loaded;
+        if (loaded.secretKey) this.secretKey = loaded.secretKey;
         return loaded;
       }
     }
@@ -69,79 +96,138 @@ export class HouseSigmaClient {
     return session;
   }
 
-  async login(email: string, password: string): Promise<SessionState> {
-    const env = await this.post<{
-      token?: string;
-      id_user?: string;
-      expire_at?: number;
-    }>(ENDPOINTS.login, { email, password }, { skipAuth: true });
-
-    const token = env.data?.token;
-    if (!token) {
+  private async ensureGuestToken(): Promise<string> {
+    if (this.guestToken) return this.guestToken;
+    const env = await this.requestJson<{
+      access_token?: string;
+      secret?: { secret_key?: string };
+    }>(
+      "POST",
+      this.buildUrl(ENDPOINTS.initAccessToken),
+      {},
+      undefined,
+    );
+    const tok = env.data?.access_token;
+    if (!tok) {
       throw new HouseSigmaError(
-        "Login succeeded with no token in response. HouseSigma may have " +
-          "changed the login payload shape - re-capture and update endpoints.",
+        "init/accesstoken/new did not return access_token",
+        env.code,
+        undefined,
+        env,
+      );
+    }
+    this.guestToken = tok;
+    this.secretKey = env.data?.secret?.secret_key ?? null;
+    return tok;
+  }
+
+  async login(email: string, password: string): Promise<SessionState> {
+    // HouseSigma's signin doesn't mint a new bearer token; it server-side
+    // upgrades the existing access_token from /init/accesstoken/new to a
+    // logged-in session. So we reuse the guest token as the user token.
+    const guest = await this.ensureGuestToken();
+    const env = await this.requestJson<{
+      user?: { user_id?: number; lang?: string; province?: string };
+      registered?: boolean;
+    }>(
+      "POST",
+      this.buildUrl(ENDPOINTS.signin),
+      { email, pass: password, login_type: "normal", token: guest },
+      guest,
+    );
+    if (!env.data?.user) {
+      throw new HouseSigmaError(
+        "Signin succeeded but no user object in response. HouseSigma may " +
+          "have changed the signin payload shape - re-capture from DevTools.",
         env.code,
         undefined,
         env,
       );
     }
     return {
-      token,
-      userId: env.data?.id_user,
-      expiresAt: env.data?.expire_at,
+      token: guest,
+      userId: env.data.user.user_id?.toString(),
+      secretKey: this.secretKey ?? undefined,
     };
   }
 
   async searchAddress(query: string): Promise<HSAddressSearchHit[]> {
-    const env = await this.get<unknown>(ENDPOINTS.search, {
-      q: query,
+    const env = await this.post<unknown>(ENDPOINTS.searchAddress, {
+      province: "ON",
+      search_term: query,
       lang: "en_US",
     });
     return normaliseSearchHits(env.data);
   }
 
   async getListing(idListing: string): Promise<HSListingDetail> {
-    const env = await this.get<unknown>(ENDPOINTS.listingDetail, {
+    const env = await this.post<unknown>(ENDPOINTS.listingDetail, {
       id_listing: idListing,
       lang: "en_US",
+      province: "ON",
     });
     return normaliseListingDetail(idListing, env.data);
   }
 
   async getListingHistory(idListing: string): Promise<HSListingHistoryEntry[]> {
-    const env = await this.get<unknown>(ENDPOINTS.listingHistory, {
+    // HouseSigma embeds listing history inside the detail_v2 response under
+    // data.listing_history. No separate endpoint exists.
+    const env = await this.post<unknown>(ENDPOINTS.listingDetail, {
       id_listing: idListing,
       lang: "en_US",
+      province: "ON",
     });
     return normaliseHistory(env.data);
   }
 
   async getComparables(idListing: string): Promise<unknown> {
-    const env = await this.get<unknown>(ENDPOINTS.comparables, {
-      id_listing: idListing,
-      lang: "en_US",
-    });
-    return env.data;
-  }
-
-  private async get<T>(
-    path: string,
-    query: Record<string, string | number | undefined>,
-  ): Promise<HSEnvelope<T>> {
-    const url = this.buildUrl(path, query);
-    const session = await this.ensureSession();
-    return this.requestJson<T>("GET", url, undefined, session.token);
+    const [sold, sale] = await Promise.all([
+      this.post<unknown>(ENDPOINTS.nearbySold, {
+        id_listing: idListing,
+        lang: "en_US",
+      }),
+      this.post<unknown>(ENDPOINTS.nearbySale, {
+        id_listing: idListing,
+        lang: "en_US",
+      }),
+    ]);
+    return { sold: sold.data, sale: sale.data };
   }
 
   private async post<T>(
     path: string,
-    body: unknown,
-    opts: { skipAuth?: boolean } = {},
+    body: Record<string, unknown>,
   ): Promise<HSEnvelope<T>> {
+    const session = await this.ensureSession();
     const url = this.buildUrl(path);
-    const token = opts.skipAuth ? undefined : (await this.ensureSession()).token;
-    return this.requestJson<T>("POST", url, body, token);
+
+    const needsSign = SIGNED_ENDPOINTS.has(path) || ENCRYPTED_ENDPOINTS.has(path);
+    const signed = needsSign ? signBody(body) : body;
+
+    if (ENCRYPTED_ENDPOINTS.has(path)) {
+      if (!this.secretKey) {
+        throw new HouseSigmaError(
+          "Encrypted endpoint called but no secret_key cached from " +
+            "/init/accesstoken/new. This is a client bug.",
+        );
+      }
+      const ts = Math.floor(Date.now() / 1000).toString();
+      const { ctr, et_payload, counter } = encryptPayload(
+        { ...signed, hs_request_timestamp: ts },
+        this.secretKey,
+      );
+      const env = await this.requestJson<unknown>(
+        "POST",
+        url,
+        { ctr, et_payload },
+        session.token,
+        { "Hs-Request-Timestamp": ts },
+      );
+      const decryptedData = decryptPayload(env.data, this.secretKey, counter);
+      return { ...env, data: decryptedData } as HSEnvelope<T>;
+    }
+
+    return this.requestJson<T>("POST", url, signed, session.token);
   }
 
   private async requestJson<T>(
@@ -149,8 +235,12 @@ export class HouseSigmaClient {
     url: string,
     body: unknown,
     token: string | undefined,
+    extraHeaders?: Record<string, string>,
   ): Promise<HSEnvelope<T>> {
-    const headers: Record<string, string> = { ...DEFAULT_HEADERS };
+    const headers: Record<string, string> = {
+      ...DEFAULT_HEADERS,
+      ...(extraHeaders ?? {}),
+    };
     if (token) headers["authorization"] = `Bearer ${token}`;
 
     if (this.cfg.debug) {
@@ -177,11 +267,14 @@ export class HouseSigmaClient {
       );
     }
 
-    const env = parsed as HSEnvelope<T>;
+    const env = parsed as HSEnvelope<T> & {
+      error?: { code?: number; message?: string };
+    };
+    const errMsg = env.error?.message ?? env.message;
     if (res.statusCode >= 400 || env.status === false) {
       throw new HouseSigmaError(
-        env.message ?? `Request failed (HTTP ${res.statusCode})`,
-        env.code,
+        errMsg || `Request failed (HTTP ${res.statusCode})`,
+        env.error?.code ?? env.code,
         res.statusCode,
         env,
       );
@@ -189,18 +282,8 @@ export class HouseSigmaClient {
     return env;
   }
 
-  private buildUrl(
-    path: string,
-    query?: Record<string, string | number | undefined>,
-  ): string {
-    const url = new URL(path, this.cfg.baseUrl);
-    if (query) {
-      for (const [k, v] of Object.entries(query)) {
-        if (v === undefined) continue;
-        url.searchParams.set(k, String(v));
-      }
-    }
-    return url.toString();
+  private buildUrl(path: string): string {
+    return new URL(API_BASE + path, this.cfg.baseUrl).toString();
   }
 
   private async loadSession(file: string): Promise<SessionState | null> {
@@ -222,33 +305,65 @@ export class HouseSigmaClient {
   }
 }
 
-// ----- normalisers ---------------------------------------------------------
-// HouseSigma's response shapes are best-effort here. They wrap responses in
-// { status, data, message } but the `data` shape varies by endpoint and is
-// not officially documented. These normalisers extract what we can and
-// always include the raw payload so callers can still see everything.
+// ---- request signing -------------------------------------------------------
+// Mirrors the bundle's Dm() function:
+//   qs = keys sorted DESC, encodeURIComponent(k)=encodeURIComponent(v),
+//        joined by &, then toLowerCase()
+//   ts = unix seconds (10-char prefix of Date.now())
+//   signature = md5(qs + ts + apiSalt)
+
+function signBody(body: Record<string, unknown>): Record<string, unknown> {
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const qs = Object.keys(body)
+    .sort()
+    .reverse()
+    .map((k) => {
+      const v = body[k];
+      if (v === undefined || v === null) return null;
+      if (typeof v !== "string" && typeof v !== "number") return null;
+      if (typeof v === "number" && Number.isNaN(v)) return null;
+      return `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+    })
+    .filter((x): x is string => x !== null)
+    .join("&")
+    .toLowerCase();
+  const signature = createHash("md5")
+    .update(qs + ts + API_SALT)
+    .digest("hex");
+  return { ...body, ts, signature };
+}
+
+// ---- normalisers -----------------------------------------------------------
 
 function normaliseSearchHits(data: unknown): HSAddressSearchHit[] {
   if (!data) return [];
+  // /search/address_v2/suggest returns
+  //   { house_list: [...], place_list: [...], community_list: [...] }
+  // house_list is the most useful - each entry already has id_listing,
+  // address, price, ml_count_text, rooms_text, brokerage_text, etc.
   const list = pickArray(data, [
+    "house_list",
     "list",
     "results",
     "items",
+    "suggest",
+    "suggestions",
     "address",
     "listings",
   ]);
   return list.map((item) => {
     const it = item as Record<string, unknown>;
+    const location = it.location as { lat?: number; lon?: number } | undefined;
     return {
       id_listing: asString(it.id_listing ?? it.id),
       id: asString(it.id),
-      text: asString(it.text ?? it.address_search),
+      text: asString(it.text ?? it.address_search ?? it.label),
       address: asString(it.address),
-      city: asString(it.city),
-      province: asString(it.province),
+      city: asString(it.city ?? it.municipality_name),
+      province: asString(it.province ?? it.province_abbr),
       postal_code: asString(it.postal_code ?? it.postcode),
-      lat: asNumber(it.lat),
-      lng: asNumber(it.lng ?? it.lon),
+      lat: asNumber(it.lat ?? location?.lat),
+      lng: asNumber(it.lng ?? it.lon ?? location?.lon),
       raw: item,
     };
   });
@@ -282,22 +397,50 @@ function normaliseListingDetail(
 
 function normaliseHistory(data: unknown): HSListingHistoryEntry[] {
   if (!data) return [];
-  const list = pickArray(data, ["history", "list", "items"]);
+  const d = data as Record<string, unknown>;
+  const list = pickArray(d.listing_history ?? d, [
+    "listing_history",
+    "transaction",
+    "history",
+    "list",
+    "items",
+  ]);
   return list.map((item) => {
     const it = item as Record<string, unknown>;
+    const start = asString(it.date_start ?? it.list_date);
+    const end = asString(it.date_end ?? it.end_date);
+    const priceDisp = asString(it.price ?? it.list_price);
+    const soldDisp = asString(it.price_sold ?? it.sold_price);
+    const blurFlag = it.blur_price === true || it.blur_price === 1;
+    const listPriceNum = asNumber(priceDisp);
+    const soldPriceNum = asNumber(soldDisp);
     return {
       id_listing: asString(it.id_listing) ?? "",
-      mls_num: asString(it.mls_num ?? it.ml_num),
-      list_date: asString(it.list_date ?? it.date_start),
-      end_date: asString(it.end_date ?? it.date_end),
+      mls_num: asString(it.ml_num ?? it.mls_num),
+      list_date: start,
+      end_date: end,
       status: asString(it.status ?? it.house_status),
-      list_price: asNumber(it.list_price ?? it.price),
-      sold_price: asNumber(it.sold_price ?? it.price_sold),
-      days_on_market: asNumber(it.dom ?? it.days_on_market),
+      list_price: listPriceNum,
+      list_price_display: priceDisp,
+      sold_price: soldPriceNum,
+      sold_price_display: soldDisp,
+      price_gated:
+        blurFlag ||
+        (priceDisp !== undefined && listPriceNum === undefined) ||
+        (soldDisp !== undefined && soldDisp !== null && soldPriceNum === undefined),
+      days_on_market: computeDOM(start, end),
       price_changes: extractPriceChanges(it),
       raw: item,
     };
   });
+}
+
+function computeDOM(start?: string, end?: string): number | undefined {
+  if (!start) return undefined;
+  const a = Date.parse(start);
+  const b = end ? Date.parse(end) : Date.now();
+  if (Number.isNaN(a) || Number.isNaN(b)) return undefined;
+  return Math.max(0, Math.floor((b - a) / (24 * 3600 * 1000)));
 }
 
 function extractPriceChanges(
@@ -341,4 +484,70 @@ function asNumber(v: unknown): number | undefined {
     return Number.isFinite(n) ? n : undefined;
   }
   return undefined;
+}
+
+// ---- payload encryption (for endpoints in ENCRYPTED_ENDPOINTS) -----------
+// Mirrors the bundle's Zr() (encrypt) and Im()+pu() (decrypt+inflate).
+//
+// Request:
+//   counter = 16 random bytes
+//   et_payload = AES-128-CTR(key=secret_key padded/truncated to 16 bytes,
+//                            iv=counter, JSON.stringify(body))
+//   ctr        = RSA-OAEP-SHA1(public_key, counter)
+//   body       = { ctr: base64(ctr), et_payload: base64(et_payload) }
+//   header     = Hs-Request-Timestamp: <unix_secs>
+//
+// Response data:
+//   base64 -> AES-CTR(same key, same counter) -> gunzip -> JSON.parse
+
+function aesKey(secretKey: string): Buffer {
+  return Buffer.from((secretKey + "*".repeat(16)).slice(0, 16), "utf8");
+}
+
+function encryptPayload(
+  body: Record<string, unknown>,
+  secretKey: string,
+): { ctr: string; et_payload: string; counter: Buffer } {
+  const counter = randomBytes(16);
+  const plaintext = Buffer.from(JSON.stringify(body), "utf8");
+  const cipher = createCipheriv("aes-128-ctr", aesKey(secretKey), counter);
+  const et = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  const rsaCtr = publicEncrypt(
+    {
+      key: PEM_PUBLIC_KEY,
+      padding: cryptoConstants.RSA_PKCS1_OAEP_PADDING,
+      oaepHash: "sha1",
+    },
+    counter,
+  );
+  return {
+    ctr: rsaCtr.toString("base64"),
+    et_payload: et.toString("base64"),
+    counter,
+  };
+}
+
+function decryptPayload(
+  encoded: unknown,
+  secretKey: string,
+  counter: Buffer,
+): unknown {
+  if (typeof encoded !== "string") return encoded;
+  const raw = Buffer.from(encoded, "base64");
+  const decipher = createDecipheriv("aes-128-ctr", aesKey(secretKey), counter);
+  const pt = Buffer.concat([decipher.update(raw), decipher.final()]);
+  for (const fn of [gunzipSync, inflateRawSync, inflateSync]) {
+    try {
+      return JSON.parse(fn(pt).toString("utf8"));
+    } catch {
+      // try next algorithm
+    }
+  }
+  try {
+    return JSON.parse(pt.toString("utf8"));
+  } catch {
+    throw new HouseSigmaError(
+      "Failed to decompress/parse decrypted response body",
+    );
+  }
 }

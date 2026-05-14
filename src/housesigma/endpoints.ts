@@ -1,33 +1,80 @@
 // HouseSigma endpoint catalog.
 //
-// These paths come from publicly-observable network traffic against
-// housesigma.com. They are NOT a documented public API and may change.
-// If a call starts returning 404 / 401 / "status: false", re-capture
-// the matching request from your logged-in browser DevTools and update
-// the path here. See README "Network capture" for the procedure.
+// These paths and the auth flow were derived from the public web bundle at
+// https://housesigma.com/assets/index.*.js (axios baseURL = base_url + "/api"
+// where base_url = "https://housesigma.com/bkv2").
+//
+// NOT a documented public API. Update here if any call starts returning
+// {"error":{"message":"API endpoint Not Found"}} or HTTP 404.
+
+export const API_BASE = "/bkv2/api";
 
 export const ENDPOINTS = {
-  // POST { email, password } -> { data: { token, id_user, ... } }
-  login: "/bkv2/api/user/login_email",
+  // POST {} -> { data: { access_token, secret: { secret_key, ... } } }
+  // First call from a fresh client; gives you a guest token that's required
+  // as Bearer auth on signin and as the body `token` field.
+  initAccessToken: "/init/accesstoken/new",
 
-  // GET ?lang=en_US -> verifies token, returns user profile
-  userInfo: "/bkv2/api/user/info",
+  // POST { email, password, token: <guest_access_token> }
+  // Requires Bearer <guest_access_token>. Returns
+  // { data: { token, user: { ... } } } on success.
+  signin: "/auth/user/signin",
 
-  // GET ?lang=en_US&q=<query>
-  // Universal search box. Returns mixed address/listing/agent hits.
-  search: "/bkv2/api/search/address",
+  // POST {} -> nukes the user token server-side.
+  signout: "/auth/user/signout",
 
-  // GET ?lang=en_US&id_listing=<id>
-  // Single listing detail.
-  listingDetail: "/bkv2/api/listing/info",
+  // POST { q } -> address suggestions list.
+  searchAddress: "/search/address_v2/suggest",
 
-  // GET ?lang=en_US&id_listing=<id>
-  // Listing history block - prior MLS entries, price changes, status.
-  listingHistory: "/bkv2/api/listing/history",
+  // POST { id_listing, ... } -> full listing detail incl. history block.
+  // NEEDS SIGNING: include signature + ts (see client.signRequest).
+  listingDetail: "/listing/info/detail_v2",
 
-  // GET ?lang=en_US&id_listing=<id>
-  // Sold/active comparables surrounding a given listing.
-  comparables: "/bkv2/api/listing/comparables",
+  // POST { id_listing } -> photos.
+  listingPhotos: "/listing/info/photos",
+
+  // POST { id_listing } -> nearby sold.
+  nearbySold: "/listing/nearby/sold",
+
+  // POST { id_listing } -> nearby for-sale.
+  nearbySale: "/listing/nearby/sale",
 } as const;
+
+// Endpoints listed in the web bundle's `needSignApi` config that require
+// signature + ts fields in the request body.
+export const SIGNED_ENDPOINTS: ReadonlySet<string> = new Set([
+  ENDPOINTS.listingDetail,
+  "/search/mapsearchv3/list",
+  "/search/mapsearchv3/listing",
+]);
+
+// Endpoints listed in the bundle's `Kr` constant that require body-level
+// AES-CTR encryption (request) + raw-deflate decompression (response).
+export const ENCRYPTED_ENDPOINTS: ReadonlySet<string> = new Set([
+  ENDPOINTS.listingDetail,
+  "/listing/info/popularity",
+  "/listing/preview/many",
+  "/search/mapsearchv3/list",
+  "/stats/trend/trendHouseList",
+  "/search/homepage/recommendlist_v2",
+]);
+
+// Header values pulled from the desktop web bundle.
+export const CLIENT_TYPE = "desktop_v7";
+export const CLIENT_VERSION = "7.22.2";
+
+// API salt used in the md5 signing. Extracted from window.Ke.apiSalt in the
+// production bundle. Rotates rarely; check the bundle if signed calls start
+// failing.
+export const API_SALT = "ZckdTeV3kGyZd80q";
+
+// RSA-OAEP-SHA1 public key from window.Ke.pemEncodedKey. Used to wrap the
+// AES-CTR counter for encrypted endpoints.
+export const PEM_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDQlOcjEbqprurl2xjoEP0QdjGI
+rZhLVn5vzwCorG4+2AtSi4AAHjghSXM//ljqE5rA13gfTc58JvM6I75Dmqr5r5Vv
+o57CAbxBXHsXu5ojtgvb5rOd2lrZeckwJL0Z7euvRsA/FjbFdGMcGeSJ8JoePq+H
+0RFOt285bSb8hVq0LQIDAQAB
+-----END PUBLIC KEY-----`;
 
 export type EndpointKey = keyof typeof ENDPOINTS;
