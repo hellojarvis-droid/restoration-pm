@@ -11,6 +11,7 @@ export interface SessionState {
   token: string;
   userId?: string;
   expiresAt?: number;
+  secretKey?: string;
 }
 
 export interface HSEnvelope<T> {
@@ -40,7 +41,10 @@ export interface HSListingHistoryEntry {
   end_date?: string;
   status?: string;
   list_price?: number;
+  list_price_display?: string;
   sold_price?: number;
+  sold_price_display?: string;
+  price_gated?: boolean;
   days_on_market?: number;
   price_changes?: Array<{
     date: string;

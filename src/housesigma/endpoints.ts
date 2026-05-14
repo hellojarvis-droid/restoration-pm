@@ -48,6 +48,17 @@ export const SIGNED_ENDPOINTS: ReadonlySet<string> = new Set([
   "/search/mapsearchv3/listing",
 ]);
 
+// Endpoints listed in the bundle's `Kr` constant that require body-level
+// AES-CTR encryption (request) + raw-deflate decompression (response).
+export const ENCRYPTED_ENDPOINTS: ReadonlySet<string> = new Set([
+  ENDPOINTS.listingDetail,
+  "/listing/info/popularity",
+  "/listing/preview/many",
+  "/search/mapsearchv3/list",
+  "/stats/trend/trendHouseList",
+  "/search/homepage/recommendlist_v2",
+]);
+
 // Header values pulled from the desktop web bundle.
 export const CLIENT_TYPE = "desktop_v7";
 export const CLIENT_VERSION = "7.22.2";
@@ -56,5 +67,14 @@ export const CLIENT_VERSION = "7.22.2";
 // production bundle. Rotates rarely; check the bundle if signed calls start
 // failing.
 export const API_SALT = "ZckdTeV3kGyZd80q";
+
+// RSA-OAEP-SHA1 public key from window.Ke.pemEncodedKey. Used to wrap the
+// AES-CTR counter for encrypted endpoints.
+export const PEM_PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDQlOcjEbqprurl2xjoEP0QdjGI
+rZhLVn5vzwCorG4+2AtSi4AAHjghSXM//ljqE5rA13gfTc58JvM6I75Dmqr5r5Vv
+o57CAbxBXHsXu5ojtgvb5rOd2lrZeckwJL0Z7euvRsA/FjbFdGMcGeSJ8JoePq+H
+0RFOt285bSb8hVq0LQIDAQAB
+-----END PUBLIC KEY-----`;
 
 export type EndpointKey = keyof typeof ENDPOINTS;
