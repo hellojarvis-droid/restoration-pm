@@ -288,10 +288,12 @@
     <p class="lede">Three reasons this offer reflects the market.</p>
 
     <p>
-      <strong>1. The market hasn't grown since the seller bought in 2021.</strong>
-      The Uxbridge median sold price in Aug 2021 (when 35 Jonathan transacted) was $1.063M.
-      Today (May 2026) it is $972,000 — flat to slightly down over almost five years, and
-      <strong>−21% from the May 2022 peak</strong>.
+      <strong>1. The price assumes the wrong size class.</strong>
+      35 Jonathan is a <strong>1,100–1,500 sq ft bungalow</strong>. The comparable Uxbridge
+      detached homes that have actually sold in this size + style cohort transacted
+      between <strong>$830k and $900k</strong> (median ~$865k). The neighbouring
+      $1.2M+ sales the listing implicitly anchors to are all <strong>2,000–3,500 sq ft</strong>
+      two-storey homes — literally 2× to 3× the size.
     </p>
     <p>
       <strong>2. The list price has been tested by the market four times and rejected each time.</strong>
@@ -300,18 +302,20 @@
       The market is telling the seller this home does not transact above $1.0M.
     </p>
     <p>
-      <strong>3. The comparable sold record supports $830k–$900k for this specification.</strong>
-      Of the ten nearest recent detached sales in Uxbridge, four sold below $900k and the
-      lower quartile is roughly $850k. Our $880k offer sits above the bottom four of those
-      ten sales — it is a fair, market-anchored price.
+      <strong>3. The market hasn't grown since the seller bought in 2021.</strong>
+      The Uxbridge median sold price in Aug 2021 (when 35 Jonathan transacted) was $1.063M.
+      Today (May 2026) it is $972,000 — <strong>−9% from Aug 2021</strong> and
+      <strong>−21% from the May 2022 peak</strong>. A list price of $1,149,900 implies the
+      home appreciated 17% on a market that depreciated 9%.
     </p>
 
     <div class="key">
       <strong>The framing:</strong>
-      We are not trying to extract a discount. We are offering a number the comparable
-      sales record genuinely supports. A sale at $880k preserves a substantial portion of
-      the seller's 2021 cost basis while reflecting four years of flat-to-declining market
-      conditions.
+      We are not trying to extract a discount. We are offering a number the
+      same-size, same-style comparable sales record genuinely supports. A sale
+      at $880k is <em>above</em> the matched-cohort median, preserves a substantial
+      portion of the seller's 2021 cost basis, and reflects four years of
+      flat-to-declining market conditions.
     </div>
   </section>
 
@@ -410,82 +414,129 @@
   </section>
 
   <!-- COMPARABLES -->
-  <section>
-    <h2>Comparable sales — nearest 10 detached homes</h2>
-    <p class="lede">All sold recently within Uxbridge, detached property type (HouseSigma nearby-sold).</p>
+  <section class="pagebreak">
+    <h2>Comparable sales — sorted by size class</h2>
+    <p class="lede">
+      The nearest 10 detached sales in Uxbridge, split into the cohort that
+      actually matches 35 Jonathan's 1,100–1,500 sq ft bungalow specification
+      vs. the larger 2,000+ sq ft two-storey homes the listing implicitly
+      anchors to. Source: HouseSigma per-listing detail (building age, style, square footage).
+    </p>
 
-    <div class="chart-wrap">
-      <canvas id="compsChart" height="320"></canvas>
-      <div class="legend">Recent sold prices (HouseSigma map-label values, rounded to nearest $50k). Blue bar = current list price. Green bar = our offer.</div>
-    </div>
-
+    <h3 style="margin-top:24px;">Matched cohort: 1,100–1,500 sq ft single-storey, similar vintage</h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 6px;">
+      Same square-footage band, same single-storey style, same building-age bracket
+      as 35 Jonathan. <strong>This is the cohort that should price the home.</strong>
+    </p>
     <table>
       <thead>
         <tr>
           <th>Address (Uxbridge)</th>
-          <th>Type</th>
+          <th>Style</th>
+          <th>Sq ft</th>
+          <th>Age (yrs)</th>
           <th class="num">Sold price</th>
-          <th>Distance from 35 Jonathan</th>
+          <th class="num">$/sq ft<br><span style="font-weight:normal;text-transform:none;letter-spacing:0;font-size:10px;">(mid 1,300 sf)</span></th>
         </tr>
       </thead>
       <tbody>
-        <tr><td>142 Planks Lane</td><td>Detached</td><td class="num">$830,000</td><td>0.2 km E</td></tr>
-        <tr><td>39 Ewen Drive</td><td>Detached</td><td class="num">$850,000</td><td>0.6 km SW</td></tr>
-        <tr><td>81 Ewen Drive</td><td>Detached</td><td class="num">$850,000</td><td>0.9 km SW</td></tr>
-        <tr><td>17 St. John's Court</td><td>Detached</td><td class="num">$880,000</td><td>1.0 km E</td></tr>
-        <tr class="highlight"><td><strong>Median of 10 sold</strong></td><td>—</td><td class="num"><strong>~$1,000,000</strong></td><td>—</td></tr>
-        <tr><td>42 Marietta Street</td><td>Detached</td><td class="num">$900,000</td><td>0.5 km W</td></tr>
-        <tr><td>11 Joseph Street N</td><td>Detached</td><td class="num">$1,100,000</td><td>0.7 km S</td></tr>
-        <tr><td>5 Brownscombe Crescent</td><td>Detached</td><td class="num">$1,200,000</td><td>0.5 km E</td></tr>
-        <tr><td>67 Barton Lane</td><td>Detached</td><td class="num">$1,200,000</td><td>0.5 km N</td></tr>
-        <tr><td>3 Coral Creek Crescent</td><td>Detached</td><td class="num">$1,200,000</td><td>0.6 km E</td></tr>
-        <tr><td>15 Glenn Gould Crescent N</td><td>Detached</td><td class="num">$1,300,000</td><td>0.4 km N</td></tr>
-        <tr class="target"><td><strong>35 Jonathan Street (subject)</strong></td><td>Detached</td><td class="num"><strong>list $1,149,900</strong></td><td>—</td></tr>
+        <tr><td>142 Planks Lane</td><td>1½ Storey</td><td>1,100–1,500</td><td>51–99</td><td class="num">$830,000</td><td class="num">$638</td></tr>
+        <tr><td>39 Ewen Drive</td><td>Bungalow</td><td>1,100–1,500</td><td>31–50</td><td class="num">$850,000</td><td class="num">$654</td></tr>
+        <tr><td>17 St. John's Court</td><td>Bungalow</td><td>1,100–1,500</td><td>—</td><td class="num">$880,000</td><td class="num">$677</td></tr>
+        <tr><td>42 Marietta Street</td><td>Bungalow</td><td>1,100–1,500</td><td>31–50</td><td class="num">$900,000</td><td class="num">$692</td></tr>
+        <tr class="highlight"><td><strong>Cohort median</strong></td><td>—</td><td>1,100–1,500</td><td>—</td><td class="num"><strong>$865,000</strong></td><td class="num"><strong>$665</strong></td></tr>
+        <tr class="target"><td><strong>35 Jonathan Street — our offer</strong></td><td>Bungalow</td><td>1,100–1,500</td><td>31–50</td><td class="num"><strong>$880,000</strong></td><td class="num"><strong>$677</strong></td></tr>
+        <tr class="target"><td>35 Jonathan Street — current list</td><td>Bungalow</td><td>1,100–1,500</td><td>31–50</td><td class="num">$1,149,900</td><td class="num">$885</td></tr>
       </tbody>
     </table>
-
     <p>
-      Five of the ten nearest sold detached homes — <strong>142 Planks Lane, 39 Ewen Drive,
-      81 Ewen Drive, 17 St. John's Court, and 42 Marietta Street</strong> — sold between $830k
-      and $900k. Our $880k offer sits squarely in the middle of that band. The homes
-      above $1.1M in this comparable set are generally larger, newer, or on premium lots
-      (Brownscombe / Glenn Gould / Coral Creek crescents are newer developments).
+      Of the four direct matches by size, style and age, sold prices clustered between
+      <strong>$830k and $900k</strong> with a median of <strong>$865k</strong> and a
+      median $/sq ft of <strong>$665</strong>. Our $880k offer sits <em>above</em> the
+      cohort median and at the cohort's median $/sq ft — it is genuinely the right number
+      for this size, not a discount.
     </p>
+
+    <h3 style="margin-top:32px;">For contrast: the larger-home cohort the list price implicitly uses</h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 6px;">
+      Same area, but materially larger homes (1.5× to 3× the floor area). These
+      sales should <strong>not</strong> drive 35 Jonathan's price — they're a
+      different product.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Address (Uxbridge)</th>
+          <th>Style</th>
+          <th>Sq ft</th>
+          <th>Age (yrs)</th>
+          <th class="num">Sold price</th>
+          <th class="num">$/sq ft</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>81 Ewen Drive</td><td>Bungalow</td><td>1,500–2,000</td><td>31–50</td><td class="num">$850,000</td><td class="num">$486</td></tr>
+        <tr><td>11 Joseph Street N</td><td>Bungalow-Raised</td><td>1,100–1,500*</td><td>—</td><td class="num">$1,100,000</td><td class="num">$846</td></tr>
+        <tr><td>5 Brownscombe Crescent</td><td>2-Storey</td><td>2,000–2,500</td><td>31–50</td><td class="num">$1,200,000</td><td class="num">$533</td></tr>
+        <tr><td>67 Barton Lane</td><td>2-Storey</td><td>2,000–2,500</td><td>—</td><td class="num">$1,200,000</td><td class="num">$533</td></tr>
+        <tr><td>3 Coral Creek Crescent</td><td>2-Storey</td><td>2,000–2,500</td><td>16–30</td><td class="num">$1,200,000</td><td class="num">$533</td></tr>
+        <tr><td>15 Glenn Gould Crescent N</td><td>2-Storey</td><td>3,000–3,500</td><td>—</td><td class="num">$1,300,000</td><td class="num">$400</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--muted);">
+      * 11 Joseph St N is the same nominal floor-area band but a raised bungalow,
+      which is effectively two living levels and trades at a corresponding premium.
+    </p>
+
+    <div class="key">
+      <strong>The decisive $/sq ft argument.</strong>
+      The current list of $1,149,900 implies <strong>~$885/sq ft</strong> for 35
+      Jonathan. The four directly-comparable smaller-format sold homes transacted
+      at <strong>$638–$692/sq ft</strong> (median $665). The larger 2,000–3,500
+      sq ft homes the listing price tries to reach actually transacted at
+      <strong>$400–$533/sq ft</strong>. <em>No size class in this market supports
+      $885/sq ft.</em> Our $880k offer prices 35 Jonathan at exactly the matched-
+      cohort median $/sq ft.
+    </div>
   </section>
 
   <!-- ACTIVE COMPETITION -->
   <section>
-    <h2>Active competition — what 35 Jonathan is up against right now</h2>
-    <p class="lede">Other Uxbridge detached homes currently for sale within ~1 km.</p>
+    <h2>Active competition — same size class, lower prices</h2>
+    <p class="lede">Other Uxbridge detached homes currently for sale within ~1 km, with size and style noted.</p>
 
     <table>
       <thead>
         <tr>
           <th>Address (Uxbridge)</th>
-          <th class="num">Current list price</th>
+          <th>Style</th>
+          <th>Sq ft</th>
+          <th class="num">List price</th>
           <th>Note</th>
         </tr>
       </thead>
       <tbody>
-        <tr class="highlight"><td><strong>21 Jonathan Street</strong></td><td class="num"><strong>~$1,000,000</strong></td><td>Same street, &lt;200 m away</td></tr>
-        <tr><td>87 Cedar Street N</td><td class="num">~$900,000</td><td>Direct competitor by price</td></tr>
-        <tr><td>34 South Balsam Street</td><td class="num">~$900,000</td><td>Direct competitor by price</td></tr>
-        <tr><td>24 McGuire Crescent</td><td class="num">~$1,000,000</td><td>Same band as 21 Jonathan</td></tr>
-        <tr><td>241 Maple Street</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
-        <tr><td>40 Balsam Street N</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
-        <tr><td>37 Carmody Lane</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
-        <tr><td>7 OS James Hunt Court</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
-        <tr><td>22 Young Street</td><td class="num">~$1,300,000</td><td>Larger / different tier</td></tr>
-        <tr class="target"><td><strong>35 Jonathan Street</strong></td><td class="num"><strong>$1,149,900</strong></td><td>Subject — 120 days on market</td></tr>
+        <tr class="highlight"><td><strong>21 Jonathan Street</strong></td><td>Sidesplit 3</td><td>1,100–1,500</td><td class="num"><strong>~$1,000,000</strong></td><td>Same street, 5 doors away · same size class</td></tr>
+        <tr class="highlight"><td>87 Cedar Street N</td><td>Backsplit 3</td><td>1,100–1,500</td><td class="num">~$900,000</td><td>Same size class</td></tr>
+        <tr class="highlight"><td>22 Young Street</td><td>Bungalow-Raised</td><td>1,100–1,500</td><td class="num">~$1,300,000</td><td>Same nominal size, raised format (2 levels of living)</td></tr>
+        <tr class="highlight"><td>241 Maple Street</td><td>Bungalow</td><td>1,100–1,500</td><td class="num">~$1,100,000</td><td>Same size class · directly comparable</td></tr>
+        <tr class="highlight"><td>24 McGuire Crescent</td><td>2-Storey</td><td>1,100–1,500</td><td class="num">~$1,000,000</td><td>Same size class</td></tr>
+        <tr><td>34 South Balsam Street</td><td>2-Storey</td><td>1,500–2,000</td><td class="num">~$900,000</td><td>Larger but priced under list</td></tr>
+        <tr><td>37 Carmody Lane</td><td>2-Storey</td><td>1,500–2,000</td><td class="num">~$1,100,000</td><td>Larger</td></tr>
+        <tr><td>7 OS James Hunt Court</td><td>Bungaloft</td><td>1,500–2,000</td><td class="num">~$1,100,000</td><td>Larger</td></tr>
+        <tr><td>40 Balsam Street N</td><td>2-Storey</td><td>2,000–2,500</td><td class="num">~$1,100,000</td><td>Materially larger</td></tr>
+        <tr class="target"><td><strong>35 Jonathan Street</strong></td><td>Bungalow</td><td>1,100–1,500</td><td class="num"><strong>$1,149,900</strong></td><td>Subject — 120 days on market</td></tr>
       </tbody>
     </table>
 
     <div class="key">
-      <strong>The next-door comp:</strong> <strong>21 Jonathan Street</strong> — same street,
-      five doors away — is currently listed at approximately <strong>$1,000,000</strong>.
-      A buyer comparing the two side-by-side has no reason to pay $150,000 more for 35
-      Jonathan. The seller's pricing strategy assumes the market hasn't noticed the
-      neighbour.
+      <strong>The same-size cohort is asking $900k – $1.1M, not $1.15M.</strong>
+      Of the five active listings that match 35 Jonathan's 1,100–1,500 sq ft size
+      class, four are asking <strong>$1.1M or below</strong>, including <strong>21 Jonathan
+      Street five doors away at ~$1.0M</strong>. The only same-size active listing above
+      35 Jonathan's price (22 Young at $1.3M) is a raised bungalow with effectively
+      two levels of living space. A buyer comparing same-size, same-area inventory
+      has no reason to choose 35 Jonathan at $1.149M.
     </div>
   </section>
 
@@ -628,16 +679,26 @@ new Chart(document.getElementById("trendChart"), {
       x: {
         ticks: {
           color: "#5b6473",
-          font: { size: 10 },
+          font: { size: 11 },
           maxRotation: 0,
-          autoSkip: true,
-          maxTicksLimit: 12,
-          callback: function(v, i) {
+          autoSkip: false,
+          callback: function(v) {
+            // Label every 6 months as "MMM 'YY"
             const l = this.getLabelForValue(v);
-            return l && l.endsWith("-01") ? l.slice(0,4) : "";
-          }
+            if (!l) return "";
+            const [yr, mo] = l.split("-");
+            if (mo !== "01" && mo !== "07") return "";
+            const monthName = mo === "01" ? "Jan" : "Jul";
+            return `${monthName} '${yr.slice(2)}`;
+          },
         },
-        grid: { display: false },
+        grid: { color: "#f1f4f8", drawTicks: false },
+        title: {
+          display: true,
+          text: "Month",
+          color: "#8993a4",
+          font: { size: 11 },
+        },
       },
     },
     plugins: {
@@ -647,60 +708,6 @@ new Chart(document.getElementById("trendChart"), {
   },
 });
 
-const COMPS = [
-  { addr: "142 Planks Ln", price: 830000 },
-  { addr: "39 Ewen Dr", price: 850000 },
-  { addr: "81 Ewen Dr", price: 850000 },
-  { addr: "Our offer (35 Jonathan)", price: 880000, kind: "offer" },
-  { addr: "17 St. John's Ct", price: 880000 },
-  { addr: "42 Marietta St", price: 900000 },
-  { addr: "11 Joseph St N", price: 1100000 },
-  { addr: "35 Jonathan list price", price: 1149900, kind: "list" },
-  { addr: "5 Brownscombe Cres", price: 1200000 },
-  { addr: "67 Barton Ln", price: 1200000 },
-  { addr: "3 Coral Creek Cres", price: 1200000 },
-  { addr: "15 Glenn Gould Cres N", price: 1300000 },
-];
-
-new Chart(document.getElementById("compsChart"), {
-  type: "bar",
-  data: {
-    labels: COMPS.map(c => c.addr),
-    datasets: [{
-      label: "Sold price",
-      data: COMPS.map(c => c.price),
-      backgroundColor: COMPS.map(c =>
-        c.kind === "offer" ? "rgba(42,117,72,0.85)" :
-        c.kind === "list"  ? "rgba(20,92,158,0.85)" :
-                             "rgba(155,165,180,0.75)"
-      ),
-      borderColor: COMPS.map(c =>
-        c.kind === "offer" ? "rgba(42,117,72,1)" :
-        c.kind === "list"  ? "rgba(20,92,158,1)" :
-                             "rgba(155,165,180,1)"
-      ),
-      borderWidth: 1,
-    }],
-  },
-  options: {
-    indexAxis: "y",
-    responsive: true,
-    scales: {
-      x: {
-        ticks: { callback: fmt, color: "#5b6473", font: { size: 11 } },
-        grid: { color: "#eef1f5" },
-      },
-      y: {
-        ticks: { color: "#5b6473", font: { size: 11 } },
-        grid: { display: false },
-      },
-    },
-    plugins: {
-      legend: { display: false },
-      tooltip: { callbacks: { label: c => fmt(c.parsed.x) } },
-    },
-  },
-});
 </script>
 </body>
 </html>

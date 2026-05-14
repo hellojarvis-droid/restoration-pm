@@ -10,10 +10,12 @@ await page.goto("http://127.0.0.1:8765/index.html", { waitUntil: "networkidle" }
 // Wait for Chart.js to load AND both canvases to have drawn pixels
 await page.waitForFunction(() => typeof window.Chart === "function", { timeout: 30000 });
 await page.waitForFunction(() => {
-  for (const c of document.querySelectorAll("canvas")) {
+  const cs = document.querySelectorAll("canvas");
+  if (cs.length === 0) return false;
+  for (const c of cs) {
     if (c.width === 0 || c.height === 0) return false;
   }
-  return document.querySelectorAll("canvas").length >= 2;
+  return true;
 }, { timeout: 30000 });
 await page.waitForTimeout(2500); // allow animation to settle
 
