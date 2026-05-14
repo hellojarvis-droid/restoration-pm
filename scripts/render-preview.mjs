@@ -30,19 +30,29 @@ await page.pdf({
 });
 console.log("[+] wrote 35-jonathan-offer.pdf");
 
-// Also page-by-page screenshots for inline preview (max ~1500px tall each)
-const h = await page.evaluate(() => document.body.scrollHeight);
+// Also page-by-page screenshots for inline preview (max ~1400px tall each).
+// Re-measure height after switching to print media (chart canvases can grow).
+await page.emulateMedia({ media: "screen" });
+await page.setViewportSize({ width: 1100, height: 800 });
+await page.waitForTimeout(300);
+const h = await page.evaluate(() =>
+  Math.max(
+    document.body.scrollHeight,
+    document.documentElement.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.offsetHeight,
+  ),
+);
 const PER = 1400;
 const pages = Math.ceil(h / PER);
 console.log(`[+] full height: ${h}px -> ${pages} preview slices`);
 
-// Resize viewport tall enough for each slice, scroll, then screenshot viewport
 for (let i = 0; i < pages; i++) {
   const yOffset = i * PER;
   const sliceHeight = Math.min(PER, h - yOffset);
   await page.setViewportSize({ width: 1100, height: sliceHeight });
   await page.evaluate((y) => window.scrollTo(0, y), yOffset);
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(300);
   await page.screenshot({
     path: `/home/user/restoration-pm/pitch/preview-${String(i+1).padStart(2,"0")}.png`,
     fullPage: false,
