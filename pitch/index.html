@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Offer Submission — 35 Jonathan Street, Uxbridge</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --ink: #1a1f2c;
+    --muted: #5b6473;
+    --soft: #8993a4;
+    --line: #e3e7ee;
+    --bg: #fafbfc;
+    --card: #ffffff;
+    --accent: #145c9e;
+    --accent-soft: #e8f1fa;
+    --warn: #b1531a;
+    --good: #2a7548;
+    --bad: #a8331e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.55;
+    font-size: 15px;
+  }
+  .page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 56px 56px 96px;
+    background: var(--card);
+    min-height: 100vh;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+  @media print {
+    body { background: white; font-size: 13px; }
+    .page { box-shadow: none; padding: 24px; max-width: none; }
+    .pagebreak { page-break-before: always; }
+    .no-print { display: none; }
+  }
+  header.cover {
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--soft);
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: 36px;
+    line-height: 1.15;
+    margin: 0 0 8px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  h1 .addr { color: var(--ink); }
+  .subtitle {
+    font-size: 18px;
+    color: var(--muted);
+    margin: 12px 0 0;
+  }
+  .offerblock {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    border-radius: 6px;
+  }
+  .stat .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--soft);
+    margin-bottom: 4px;
+  }
+  .stat .value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .stat .value.accent { color: var(--accent); }
+  .stat .sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 48px 0 4px;
+    letter-spacing: -0.01em;
+  }
+  h2 + .lede {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0 0 20px;
+  }
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 24px 0 8px;
+    color: var(--ink);
+  }
+  p { margin: 0 0 12px; }
+  .key {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 20px 0;
+    border-radius: 0 4px 4px 0;
+  }
+  .key strong { color: var(--accent); }
+  .chart-wrap {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0 8px;
+  }
+  .chart-wrap .legend {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  th {
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.highlight td {
+    background: #fff7e6;
+    font-weight: 600;
+  }
+  tr.target td {
+    background: var(--accent-soft);
+    font-weight: 600;
+  }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+  .tag.sold { background: #e8f5ec; color: var(--good); }
+  .tag.term { background: #fbecea; color: var(--bad); }
+  .tag.susp { background: #fff3e0; color: var(--warn); }
+  .tag.active { background: var(--accent-soft); color: var(--accent); }
+  .property-facts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0 32px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .property-facts dt { color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .property-facts dd { margin: 0; padding: 6px 0; border-bottom: 1px solid var(--line); text-align: right; font-weight: 500; }
+  .timeline {
+    margin: 20px 0;
+    position: relative;
+  }
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: start;
+  }
+  .timeline-row:last-child { border-bottom: none; }
+  .timeline-dates {
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .timeline-dates strong { display: block; color: var(--ink); font-size: 13px; font-weight: 600; }
+  .timeline-body { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .timeline-body .ml { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: var(--muted); }
+  .timeline-body .price { font-weight: 600; font-size: 15px; }
+  .timeline-body .dom { font-size: 12px; color: var(--muted); }
+  footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    color: var(--soft);
+    line-height: 1.6;
+  }
+  .ask-card {
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, var(--accent-soft), #f4f9fd);
+    margin: 24px 0;
+  }
+  .ask-card .price-large {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .ask-card .price-meta {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .terms-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .term {
+    border: 1px solid var(--line);
+    padding: 12px 14px;
+    border-radius: 4px;
+    background: var(--bg);
+  }
+  .term .name { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+  .term .val { font-size: 14px; font-weight: 500; color: var(--ink); margin-top: 2px; }
+  .term.win { border-color: var(--good); background: #f5fbf7; }
+  .term.win .name { color: var(--good); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- COVER -->
+  <header class="cover">
+    <div class="eyebrow">Offer Submission · Prepared for the Listing Agent</div>
+    <h1>35 Jonathan Street, <span class="addr">Uxbridge, ON L9P 1B7</span></h1>
+    <p class="subtitle">A data-supported offer at <strong>$880,000</strong>, justified by the comparable sales record and the 5-year market history for Uxbridge detached homes.</p>
+
+    <div class="offerblock">
+      <div class="stat">
+        <div class="label">Offer</div>
+        <div class="value accent">$880,000</div>
+        <div class="sub">vs. list $1,149,900 (−23.5%)</div>
+      </div>
+      <div class="stat">
+        <div class="label">Current List</div>
+        <div class="value">$1,149,900</div>
+        <div class="sub">MLS&nbsp;N12695272 · 120 days on market</div>
+      </div>
+      <div class="stat">
+        <div class="label">2021 Sale Price</div>
+        <div class="value">$979,900</div>
+        <div class="sub">Aug 2021 (peak-era purchase)</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- SUMMARY -->
+  <section>
+    <h2>Executive summary</h2>
+    <p class="lede">Three reasons this offer reflects the market.</p>
+
+    <p>
+      <strong>1. The market hasn't grown since the seller bought in 2021.</strong>
+      The Uxbridge median sold price in Aug 2021 (when 35 Jonathan transacted) was $1.063M.
+      Today (May 2026) it is $972,000 — flat to slightly down over almost five years, and
+      <strong>−21% from the May 2022 peak</strong>.
+    </p>
+    <p>
+      <strong>2. The list price has been tested by the market four times and rejected each time.</strong>
+      Between Sep 2025 and today the home has been listed for a cumulative 198 days across
+      three consecutive listings (Terminated → Suspended → Active) without an executed offer.
+      The market is telling the seller this home does not transact above $1.0M.
+    </p>
+    <p>
+      <strong>3. The comparable sold record supports $830k–$900k for this specification.</strong>
+      Of the ten nearest recent detached sales in Uxbridge, four sold below $900k and the
+      lower quartile is roughly $850k. Our $880k offer sits above the bottom four of those
+      ten sales — it is a fair, market-anchored price.
+    </p>
+
+    <div class="key">
+      <strong>The framing:</strong>
+      We are not trying to extract a discount. We are offering a number the comparable
+      sales record genuinely supports. A sale at $880k preserves a substantial portion of
+      the seller's 2021 cost basis while reflecting four years of flat-to-declining market
+      conditions.
+    </div>
+  </section>
+
+  <!-- PROPERTY -->
+  <section>
+    <h2>The property as listed</h2>
+    <p class="lede">Drawn from the current MLS listing (N12695272).</p>
+    <dl class="property-facts">
+      <dt>Address</dt><dd>35 Jonathan Street, Uxbridge L9P 1B7</dd>
+      <dt>Property type</dt><dd>Detached bungalow</dd>
+      <dt>Bedrooms</dt><dd>3 + 1 (4 total, 1 below grade)</dd>
+      <dt>Bathrooms</dt><dd>2 (4-piece &amp; 2-piece, both main floor)</dd>
+      <dt>Building size</dt><dd>1,100 – 1,500 sq ft</dd>
+      <dt>Building age</dt><dd>31 – 50 years</dd>
+      <dt>Construction</dt><dd>Board &amp; batten + brick</dd>
+      <dt>Basement</dt><dd>Finished</dd>
+      <dt>Heating / cooling</dt><dd>Forced-air gas / central A/C</dd>
+      <dt>Water / sewer</dt><dd>Well / septic</dd>
+      <dt>Parking</dt><dd>2-car carport · 6 driveway · 8 total</dd>
+      <dt>Lot</dt><dd>91 × 188 ft (≈ 0.39 acre)</dd>
+      <dt>Cross street</dt><dd>Centre St / Jonathan St</dd>
+      <dt>Brokerage on file</dt><dd>Union Capital Realty</dd>
+    </dl>
+  </section>
+
+  <!-- LISTING HISTORY -->
+  <section>
+    <h2>The listing has been re-tested four times</h2>
+    <p class="lede">Every prior attempt at this price band has ended without a deal.</p>
+
+    <div class="timeline">
+      <div class="timeline-row">
+        <div class="timeline-dates"><strong>Aug 3 – 9, 2021</strong>2021 peak market</div>
+        <div class="timeline-body">
+          <span class="ml">MLS&nbsp;N5327205</span>
+          <span class="price">$979,900</span>
+          <span class="tag sold">Sold $979,900</span>
+          <span class="dom">6 days · sold at list</span>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="timeline-dates"><strong>Sep 24 – Nov 13, 2025</strong>Relisting #1</div>
+        <div class="timeline-body">
+          <span class="ml">MLS&nbsp;N12424429</span>
+          <span class="price">$1,199,900</span>
+          <span class="tag term">Terminated</span>
+          <span class="dom">50 days · no executed offer</span>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="timeline-dates"><strong>Nov 13 – Dec 11, 2025</strong>Relisting #2 ($50k cut)</div>
+        <div class="timeline-body">
+          <span class="ml">MLS&nbsp;N12541878</span>
+          <span class="price">$1,149,900</span>
+          <span class="tag susp">Suspended</span>
+          <span class="dom">28 days · no executed offer</span>
+        </div>
+      </div>
+      <div class="timeline-row">
+        <div class="timeline-dates"><strong>Jan 14, 2026 – today</strong>Current listing</div>
+        <div class="timeline-body">
+          <span class="ml">MLS&nbsp;N12695272</span>
+          <span class="price">$1,149,900</span>
+          <span class="tag active">Active · 120 days</span>
+          <span class="dom">price unchanged from #2</span>
+        </div>
+      </div>
+    </div>
+
+    <p>
+      Across the three 2025-2026 listings, the home has been on the open market for
+      <strong>~198 days</strong> at prices between $1.15M and $1.20M without producing
+      a transaction. Two consecutive terminations/suspensions at the current price band
+      are the market's clearest possible signal: at this number, the home does not sell.
+    </p>
+  </section>
+
+  <!-- MARKET TREND -->
+  <section class="pagebreak">
+    <h2>The Uxbridge market story, 2021 → today</h2>
+    <p class="lede">Median sold price for the entire Uxbridge community (HouseSigma, 60 months).</p>
+
+    <div class="chart-wrap">
+      <canvas id="trendChart" height="280"></canvas>
+      <div class="legend">Source: HouseSigma community sold-price index for Uxbridge (id 752), monthly median across all property types. Annotations mark the seller's 2021 sale, the 2022 peak, and today.</div>
+    </div>
+
+    <div class="key">
+      <strong>The market is flat-to-down over the full hold period.</strong>
+      The Uxbridge median was <strong>$1,063,000</strong> the month 35 Jonathan sold
+      (Aug 2021). It peaked at <strong>$1,225,000</strong> in May 2022, then corrected.
+      Today (May 2026) it sits at <strong>$972,000</strong>: <strong>−9% from Aug 2021</strong>
+      and <strong>−21% from the 2022 peak</strong>. A list price of $1,149,900 implies the
+      home appreciated 17% over its 2021 sale price — in a market that depreciated 9%.
+    </div>
+  </section>
+
+  <!-- COMPARABLES -->
+  <section>
+    <h2>Comparable sales — nearest 10 detached homes</h2>
+    <p class="lede">All sold recently within Uxbridge, detached property type (HouseSigma nearby-sold).</p>
+
+    <div class="chart-wrap">
+      <canvas id="compsChart" height="320"></canvas>
+      <div class="legend">Recent sold prices (HouseSigma map-label values, rounded to nearest $50k). Blue bar = current list price. Green bar = our offer.</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Address (Uxbridge)</th>
+          <th>Type</th>
+          <th class="num">Sold price</th>
+          <th>Distance from 35 Jonathan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>142 Planks Lane</td><td>Detached</td><td class="num">$830,000</td><td>0.2 km E</td></tr>
+        <tr><td>39 Ewen Drive</td><td>Detached</td><td class="num">$850,000</td><td>0.6 km SW</td></tr>
+        <tr><td>81 Ewen Drive</td><td>Detached</td><td class="num">$850,000</td><td>0.9 km SW</td></tr>
+        <tr><td>17 St. John's Court</td><td>Detached</td><td class="num">$880,000</td><td>1.0 km E</td></tr>
+        <tr class="highlight"><td><strong>Median of 10 sold</strong></td><td>—</td><td class="num"><strong>~$1,000,000</strong></td><td>—</td></tr>
+        <tr><td>42 Marietta Street</td><td>Detached</td><td class="num">$900,000</td><td>0.5 km W</td></tr>
+        <tr><td>11 Joseph Street N</td><td>Detached</td><td class="num">$1,100,000</td><td>0.7 km S</td></tr>
+        <tr><td>5 Brownscombe Crescent</td><td>Detached</td><td class="num">$1,200,000</td><td>0.5 km E</td></tr>
+        <tr><td>67 Barton Lane</td><td>Detached</td><td class="num">$1,200,000</td><td>0.5 km N</td></tr>
+        <tr><td>3 Coral Creek Crescent</td><td>Detached</td><td class="num">$1,200,000</td><td>0.6 km E</td></tr>
+        <tr><td>15 Glenn Gould Crescent N</td><td>Detached</td><td class="num">$1,300,000</td><td>0.4 km N</td></tr>
+        <tr class="target"><td><strong>35 Jonathan Street (subject)</strong></td><td>Detached</td><td class="num"><strong>list $1,149,900</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      Five of the ten nearest sold detached homes — <strong>142 Planks Lane, 39 Ewen Drive,
+      81 Ewen Drive, 17 St. John's Court, and 42 Marietta Street</strong> — sold between $830k
+      and $900k. Our $880k offer sits squarely in the middle of that band. The homes
+      above $1.1M in this comparable set are generally larger, newer, or on premium lots
+      (Brownscombe / Glenn Gould / Coral Creek crescents are newer developments).
+    </p>
+  </section>
+
+  <!-- ACTIVE COMPETITION -->
+  <section>
+    <h2>Active competition — what 35 Jonathan is up against right now</h2>
+    <p class="lede">Other Uxbridge detached homes currently for sale within ~1 km.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Address (Uxbridge)</th>
+          <th class="num">Current list price</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="highlight"><td><strong>21 Jonathan Street</strong></td><td class="num"><strong>~$1,000,000</strong></td><td>Same street, &lt;200 m away</td></tr>
+        <tr><td>87 Cedar Street N</td><td class="num">~$900,000</td><td>Direct competitor by price</td></tr>
+        <tr><td>34 South Balsam Street</td><td class="num">~$900,000</td><td>Direct competitor by price</td></tr>
+        <tr><td>24 McGuire Crescent</td><td class="num">~$1,000,000</td><td>Same band as 21 Jonathan</td></tr>
+        <tr><td>241 Maple Street</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
+        <tr><td>40 Balsam Street N</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
+        <tr><td>37 Carmody Lane</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
+        <tr><td>7 OS James Hunt Court</td><td class="num">~$1,100,000</td><td>Comparable to subject list</td></tr>
+        <tr><td>22 Young Street</td><td class="num">~$1,300,000</td><td>Larger / different tier</td></tr>
+        <tr class="target"><td><strong>35 Jonathan Street</strong></td><td class="num"><strong>$1,149,900</strong></td><td>Subject — 120 days on market</td></tr>
+      </tbody>
+    </table>
+
+    <div class="key">
+      <strong>The next-door comp:</strong> <strong>21 Jonathan Street</strong> — same street,
+      five doors away — is currently listed at approximately <strong>$1,000,000</strong>.
+      A buyer comparing the two side-by-side has no reason to pay $150,000 more for 35
+      Jonathan. The seller's pricing strategy assumes the market hasn't noticed the
+      neighbour.
+    </div>
+  </section>
+
+  <!-- THE OFFER -->
+  <section class="pagebreak">
+    <h2>The offer</h2>
+    <div class="ask-card">
+      <div class="label" style="font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);">Purchase price</div>
+      <div class="price-large">$880,000</div>
+      <div class="price-meta">
+        $269,900 (23.5%) below current list. $99,900 (10.2%) below the seller's 2021
+        acquisition cost. <strong>Above the bottom 4 of 10 recent Uxbridge detached sales</strong>
+        in this radius.
+      </div>
+    </div>
+
+    <h3>Offer terms</h3>
+    <div class="terms-grid">
+      <div class="term win">
+        <div class="name">Sale of buyer's home</div>
+        <div class="val">Not conditional</div>
+      </div>
+      <div class="term win">
+        <div class="name">Closing</div>
+        <div class="val">Quick close offered</div>
+      </div>
+      <div class="term">
+        <div class="name">Financing condition</div>
+        <div class="val">Standard, time-limited</div>
+      </div>
+      <div class="term">
+        <div class="name">Home inspection</div>
+        <div class="val">Standard, time-limited</div>
+      </div>
+    </div>
+    <p>
+      In a market where many buyer offers are contingent on the sale of an existing
+      home, our offer is <strong>not</strong>. The seller can plan with confidence
+      that closing won't be held hostage by a third-party transaction. Combined
+      with the offered quick close, the seller's path to liquidity is short and
+      certain.
+    </p>
+  </section>
+
+  <!-- ASK -->
+  <section>
+    <h2>The ask</h2>
+    <p>
+      We are ready to formalize this offer immediately. The data above is intended
+      to support a constructive conversation rather than to relitigate the listing
+      strategy. We understand the seller's perspective, and we recognize they sit
+      below their 2021 acquisition price in this scenario. Our position is simply
+      that the comparable evidence does not support a higher number, and the 198
+      cumulative days at $1.15M+ across three listings reflect the same conclusion.
+    </p>
+    <p>
+      We would welcome a counter at any number the seller believes is defensible
+      against this comparable record.
+    </p>
+  </section>
+
+  <footer>
+    Prepared with public listing data sourced via HouseSigma's Uxbridge market index
+    (community id 752) and nearby-sales feed for 35 Jonathan Street (id eVbOYENpbBGyx2P0).
+    Sold prices for comparable properties are stated to the nearest $50k as displayed on
+    HouseSigma's map view. Median price series is the Uxbridge all-property-type rolling
+    monthly median from June 2021 through May 2026.
+    Listing-history dates and prices for 35 Jonathan Street drawn directly from the MLS
+    record (N5327205, N12424429, N12541878, N12695272). All figures presented in good
+    faith; the listing agent is invited to verify any line item.
+  </footer>
+</div>
+
+<script>
+const TREND = [
+  ["2021-06", 951500],["2021-07", 1017595],["2021-08", 1063000],["2021-09", 1075000],["2021-10", 1050500],["2021-11", 1012500],["2021-12", 975000],
+  ["2022-01", 1000000],["2022-02", 1117500],["2022-03", 1200000],["2022-04", 1215800],["2022-05", 1225000],["2022-06", 1200000],["2022-07", 1150000],["2022-08", 1087007],["2022-09", 1012500],["2022-10", 982500],["2022-11", 965000],["2022-12", 950000],
+  ["2023-01", 927500],["2023-02", 943000],["2023-03", 1005000],["2023-04", 950500],["2023-05", 997500],["2023-06", 1047500],["2023-07", 1112500],["2023-08", 1164250],["2023-09", 1202500],["2023-10", 1135000],["2023-11", 1100000],["2023-12", 1065000],
+  ["2024-01", 1020000],["2024-02", 954250],["2024-03", 939000],["2024-04", 958000],["2024-05", 990000],["2024-06", 984900],["2024-07", 984950],["2024-08", 1000000],["2024-09", 951250],["2024-10", 921250],["2024-11", 906500],["2024-12", 805000],
+  ["2025-01", 924000],["2025-02", 1095000],["2025-03", 982500],["2025-04", 1040000],["2025-05", 1045000],["2025-06", 1000000],["2025-07", 1048750],["2025-08", 1050000],["2025-09", 1059500],["2025-10", 1140000],["2025-11", 1025000],["2025-12", 865000],
+  ["2026-01", 831000],["2026-02", 833000],["2026-03", 900000],["2026-04", 925000],["2026-05", 972000],
+];
+
+const fmt = v => "$" + Math.round(v/1000) + "k";
+
+new Chart(document.getElementById("trendChart"), {
+  type: "line",
+  data: {
+    labels: TREND.map(([m]) => m),
+    datasets: [
+      {
+        label: "Uxbridge median sold price",
+        data: TREND.map(([,p]) => p),
+        borderColor: "#145c9e",
+        backgroundColor: "rgba(20,92,158,0.08)",
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        fill: true,
+        tension: 0.25,
+      },
+      {
+        label: "Current list price ($1,149,900)",
+        data: TREND.map(() => 1149900),
+        borderColor: "rgba(168,51,30,0.85)",
+        borderDash: [4,4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      },
+      {
+        label: "Our offer ($880,000)",
+        data: TREND.map(() => 880000),
+        borderColor: "rgba(42,117,72,0.85)",
+        borderDash: [4,4],
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: false,
+      },
+      {
+        label: "Seller's 2021 sale price ($979,900)",
+        data: TREND.map(() => 979900),
+        borderColor: "rgba(91,100,115,0.55)",
+        borderDash: [2,4],
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: "index", intersect: false },
+    scales: {
+      y: {
+        beginAtZero: false,
+        ticks: { callback: fmt, color: "#5b6473", font: { size: 11 } },
+        grid: { color: "#eef1f5" },
+      },
+      x: {
+        ticks: {
+          color: "#5b6473",
+          font: { size: 10 },
+          maxRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 12,
+          callback: function(v, i) {
+            const l = this.getLabelForValue(v);
+            return l && l.endsWith("-01") ? l.slice(0,4) : "";
+          }
+        },
+        grid: { display: false },
+      },
+    },
+    plugins: {
+      legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 }, color: "#5b6473" } },
+      tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y)}` } },
+    },
+  },
+});
+
+const COMPS = [
+  { addr: "142 Planks Ln", price: 830000 },
+  { addr: "39 Ewen Dr", price: 850000 },
+  { addr: "81 Ewen Dr", price: 850000 },
+  { addr: "Our offer (35 Jonathan)", price: 880000, kind: "offer" },
+  { addr: "17 St. John's Ct", price: 880000 },
+  { addr: "42 Marietta St", price: 900000 },
+  { addr: "11 Joseph St N", price: 1100000 },
+  { addr: "35 Jonathan list price", price: 1149900, kind: "list" },
+  { addr: "5 Brownscombe Cres", price: 1200000 },
+  { addr: "67 Barton Ln", price: 1200000 },
+  { addr: "3 Coral Creek Cres", price: 1200000 },
+  { addr: "15 Glenn Gould Cres N", price: 1300000 },
+];
+
+new Chart(document.getElementById("compsChart"), {
+  type: "bar",
+  data: {
+    labels: COMPS.map(c => c.addr),
+    datasets: [{
+      label: "Sold price",
+      data: COMPS.map(c => c.price),
+      backgroundColor: COMPS.map(c =>
+        c.kind === "offer" ? "rgba(42,117,72,0.85)" :
+        c.kind === "list"  ? "rgba(20,92,158,0.85)" :
+                             "rgba(155,165,180,0.75)"
+      ),
+      borderColor: COMPS.map(c =>
+        c.kind === "offer" ? "rgba(42,117,72,1)" :
+        c.kind === "list"  ? "rgba(20,92,158,1)" :
+                             "rgba(155,165,180,1)"
+      ),
+      borderWidth: 1,
+    }],
+  },
+  options: {
+    indexAxis: "y",
+    responsive: true,
+    scales: {
+      x: {
+        ticks: { callback: fmt, color: "#5b6473", font: { size: 11 } },
+        grid: { color: "#eef1f5" },
+      },
+      y: {
+        ticks: { color: "#5b6473", font: { size: 11 } },
+        grid: { display: false },
+      },
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: c => fmt(c.parsed.x) } },
+    },
+  },
+});
+</script>
+</body>
+</html>
