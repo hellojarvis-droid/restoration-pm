@@ -24,17 +24,25 @@ Claude Code and Codex CLI as tools.
 Requires Node.js 20+.
 
 ```bash
+git clone <this repo> ~/.local/share/housesigma-mcp   # any permanent path is fine
+cd ~/.local/share/housesigma-mcp
 npm install
 npm run build
 ```
 
-Create a `.env` (see `.env.example`):
+Create a `.env`. The MCP looks for one in (highest priority first):
+
+1. `$HOUSESIGMA_ENV_FILE`
+2. `$PWD/.env`
+3. `<repo>/.env`             ← simplest: drop it here
+4. `~/.config/housesigma-mcp/.env`
+5. `~/.housesigma-mcp/.env`
 
 ```env
 HOUSESIGMA_EMAIL=you@example.com
 HOUSESIGMA_PASSWORD=...
-# OR, if email/password login fails (rare):
-HOUSESIGMA_TOKEN=eyJ...   # bearer token from a logged-in browser
+# OR, if you'd rather paste a bearer token from a logged-in browser session:
+HOUSESIGMA_TOKEN=eyJ...
 ```
 
 Smoke-test:
@@ -43,45 +51,52 @@ Smoke-test:
 node dist/smoke.js "35 Jonathan Street Uxbridge"
 ```
 
-## Install into Claude Code
+## Persistent install — works from anywhere
 
-This repo ships with a `.mcp.json` at the root, so Claude Code picks the
-server up automatically when launched from this directory:
+### Claude Code (recommended: user scope)
 
 ```bash
-cd /path/to/restoration-pm
+claude mcp add --scope user housesigma \
+  node /absolute/path/to/housesigma-mcp/dist/index.js
+```
+
+This writes to `~/.claude.json` so the MCP is available in **every** Claude
+Code session, regardless of which project directory you're in. Verify:
+
+```bash
 claude mcp list
-# housesigma: node ./dist/index.js - ✓ Connected
+# housesigma: node /abs/path/dist/index.js - ✓ Connected
 ```
 
-If you want it available globally instead, drop the same entry into
-`~/.claude/settings.json` under `mcpServers`, using an absolute path:
+To remove later: `claude mcp remove housesigma -s user`.
 
-```json
-{
-  "mcpServers": {
-    "housesigma": {
-      "command": "node",
-      "args": ["/absolute/path/to/restoration-pm/dist/index.js"]
-    }
-  }
-}
-```
+### Codex CLI
 
-The tools surface as `mcp__housesigma__search_address`,
-`mcp__housesigma__get_listing_history`, etc.
-
-## Install into Codex CLI
-
-Codex reads MCP servers from `~/.codex/config.toml`:
+Edit `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.housesigma]
 command = "node"
-args = ["/absolute/path/to/restoration-pm/dist/index.js"]
+args = ["/absolute/path/to/housesigma-mcp/dist/index.js"]
 ```
 
-Then in any Codex session, `/mcp` should list `housesigma` as connected.
+Then `/mcp` in any Codex session should list `housesigma` as connected.
+
+### Project-scope alternative (for developing the MCP itself)
+
+If you're editing the MCP source and want a Claude Code session inside the
+repo to use *that* working copy, add a `.mcp.json` at the repo root:
+
+```json
+{
+  "mcpServers": {
+    "housesigma": { "command": "node", "args": ["./dist/index.js"] }
+  }
+}
+```
+
+Project scope takes precedence over user scope when both are present, so
+this is the right setup for development.
 
 ## How it works (reverse-engineered architecture)
 
@@ -134,14 +149,19 @@ response:
 ### Per-listing TOS gates
 
 HouseSigma masks data from TREB/PROPTX sources behind per-listing,
-per-source TOS gates that require a Google reCAPTCHA token. Without
-acceptance, you'll see `(Agreement required)` strings, masked MLS numbers
-(`*********`), and missing dates. **This MCP can't bypass the reCAPTCHA**
-— accept the relevant TOS once in your browser for each gated section and
-the unlock persists on your account.
+per-section TOS gates. The frontend's gate is invisible Google reCAPTCHA
+v3 — site key `6Lc82-MZAAAAALRrYvLZl3nGEmpEKJNiWy8ep5WP`, action `tos` —
+and the server **does** validate the token (empty / forged tokens return
+`Verification failed`). Acceptance persists on the account once granted,
+but each section of each listing may need its own click-through.
 
-History entries you fetch carry a `price_gated: boolean` field so the
-caller can detect masked data and prompt accordingly.
+**This MCP cannot bypass the reCAPTCHA.** When data comes back masked
+(`(Agreement required)` strings, MLS numbers like `*********`), open the
+listing in your browser, click the blurred section, and accept the popup.
+Subsequent MCP calls will return un-masked data.
+
+History entries carry a `price_gated: boolean` field so callers can
+detect masked data and prompt accordingly.
 
 ## Network capture (when HouseSigma drifts)
 

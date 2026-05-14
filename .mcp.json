@@ -1,9 +1,3 @@
 {
-  "mcpServers": {
-    "housesigma": {
-      "command": "node",
-      "args": ["./dist/index.js"],
-      "env": {}
-    }
-  }
+  "mcpServers": {}
 }
