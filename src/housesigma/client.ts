@@ -1,6 +1,14 @@
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import { request } from "undici";
-import { ENDPOINTS } from "./endpoints.js";
+import {
+  API_BASE,
+  API_SALT,
+  CLIENT_TYPE,
+  CLIENT_VERSION,
+  ENDPOINTS,
+  SIGNED_ENDPOINTS,
+} from "./endpoints.js";
 import type {
   HSEnvelope,
   HouseSigmaConfig,
@@ -10,7 +18,7 @@ import type {
   HSListingHistoryEntry,
 } from "./types.js";
 
-const DEFAULT_HEADERS = {
+const DEFAULT_HEADERS: Record<string, string> = {
   "accept": "application/json, text/plain, */*",
   "accept-language": "en-US,en;q=0.9",
   "content-type": "application/json",
@@ -19,6 +27,8 @@ const DEFAULT_HEADERS = {
   "user-agent":
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " +
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "HS-Client-Type": CLIENT_TYPE,
+  "HS-Client-Version": CLIENT_VERSION,
 };
 
 export class HouseSigmaError extends Error {
@@ -35,6 +45,7 @@ export class HouseSigmaError extends Error {
 
 export class HouseSigmaClient {
   private session: SessionState | null = null;
+  private guestToken: string | null = null;
 
   constructor(private readonly cfg: HouseSigmaConfig) {}
 
@@ -69,32 +80,53 @@ export class HouseSigmaClient {
     return session;
   }
 
-  async login(email: string, password: string): Promise<SessionState> {
-    const env = await this.post<{
-      token?: string;
-      id_user?: string;
-      expire_at?: number;
-    }>(ENDPOINTS.login, { email, password }, { skipAuth: true });
-
-    const token = env.data?.token;
-    if (!token) {
+  private async ensureGuestToken(): Promise<string> {
+    if (this.guestToken) return this.guestToken;
+    const env = await this.requestJson<{ access_token?: string }>(
+      "POST",
+      this.buildUrl(ENDPOINTS.initAccessToken),
+      {},
+      undefined,
+    );
+    const tok = env.data?.access_token;
+    if (!tok) {
       throw new HouseSigmaError(
-        "Login succeeded with no token in response. HouseSigma may have " +
-          "changed the login payload shape - re-capture and update endpoints.",
+        "init/accesstoken/new did not return access_token",
         env.code,
         undefined,
         env,
       );
     }
-    return {
-      token,
-      userId: env.data?.id_user,
-      expiresAt: env.data?.expire_at,
-    };
+    this.guestToken = tok;
+    return tok;
+  }
+
+  async login(email: string, password: string): Promise<SessionState> {
+    const guest = await this.ensureGuestToken();
+    const env = await this.requestJson<{
+      token?: string;
+      user?: { id_user?: string; lang?: string; province?: string };
+    }>(
+      "POST",
+      this.buildUrl(ENDPOINTS.signin),
+      { email, password, token: guest },
+      guest,
+    );
+    const userToken = env.data?.token;
+    if (!userToken) {
+      throw new HouseSigmaError(
+        "Signin succeeded but no user token returned. HouseSigma may have " +
+          "changed the signin payload shape - re-capture from DevTools.",
+        env.code,
+        undefined,
+        env,
+      );
+    }
+    return { token: userToken, userId: env.data?.user?.id_user };
   }
 
   async searchAddress(query: string): Promise<HSAddressSearchHit[]> {
-    const env = await this.get<unknown>(ENDPOINTS.search, {
+    const env = await this.post<unknown>(ENDPOINTS.searchAddress, {
       q: query,
       lang: "en_US",
     });
@@ -102,7 +134,7 @@ export class HouseSigmaClient {
   }
 
   async getListing(idListing: string): Promise<HSListingDetail> {
-    const env = await this.get<unknown>(ENDPOINTS.listingDetail, {
+    const env = await this.post<unknown>(ENDPOINTS.listingDetail, {
       id_listing: idListing,
       lang: "en_US",
     });
@@ -110,7 +142,9 @@ export class HouseSigmaClient {
   }
 
   async getListingHistory(idListing: string): Promise<HSListingHistoryEntry[]> {
-    const env = await this.get<unknown>(ENDPOINTS.listingHistory, {
+    // HouseSigma embeds listing history inside the detail_v2 response.
+    // No separate endpoint exists in the public bundle.
+    const env = await this.post<unknown>(ENDPOINTS.listingDetail, {
       id_listing: idListing,
       lang: "en_US",
     });
@@ -118,30 +152,27 @@ export class HouseSigmaClient {
   }
 
   async getComparables(idListing: string): Promise<unknown> {
-    const env = await this.get<unknown>(ENDPOINTS.comparables, {
-      id_listing: idListing,
-      lang: "en_US",
-    });
-    return env.data;
-  }
-
-  private async get<T>(
-    path: string,
-    query: Record<string, string | number | undefined>,
-  ): Promise<HSEnvelope<T>> {
-    const url = this.buildUrl(path, query);
-    const session = await this.ensureSession();
-    return this.requestJson<T>("GET", url, undefined, session.token);
+    const [sold, sale] = await Promise.all([
+      this.post<unknown>(ENDPOINTS.nearbySold, {
+        id_listing: idListing,
+        lang: "en_US",
+      }),
+      this.post<unknown>(ENDPOINTS.nearbySale, {
+        id_listing: idListing,
+        lang: "en_US",
+      }),
+    ]);
+    return { sold: sold.data, sale: sale.data };
   }
 
   private async post<T>(
     path: string,
-    body: unknown,
-    opts: { skipAuth?: boolean } = {},
+    body: Record<string, unknown>,
   ): Promise<HSEnvelope<T>> {
+    const session = await this.ensureSession();
     const url = this.buildUrl(path);
-    const token = opts.skipAuth ? undefined : (await this.ensureSession()).token;
-    return this.requestJson<T>("POST", url, body, token);
+    const signedBody = SIGNED_ENDPOINTS.has(path) ? signBody(body) : body;
+    return this.requestJson<T>("POST", url, signedBody, session.token);
   }
 
   private async requestJson<T>(
@@ -177,11 +208,14 @@ export class HouseSigmaClient {
       );
     }
 
-    const env = parsed as HSEnvelope<T>;
+    const env = parsed as HSEnvelope<T> & {
+      error?: { code?: number; message?: string };
+    };
+    const errMsg = env.error?.message ?? env.message;
     if (res.statusCode >= 400 || env.status === false) {
       throw new HouseSigmaError(
-        env.message ?? `Request failed (HTTP ${res.statusCode})`,
-        env.code,
+        errMsg || `Request failed (HTTP ${res.statusCode})`,
+        env.error?.code ?? env.code,
         res.statusCode,
         env,
       );
@@ -189,18 +223,8 @@ export class HouseSigmaClient {
     return env;
   }
 
-  private buildUrl(
-    path: string,
-    query?: Record<string, string | number | undefined>,
-  ): string {
-    const url = new URL(path, this.cfg.baseUrl);
-    if (query) {
-      for (const [k, v] of Object.entries(query)) {
-        if (v === undefined) continue;
-        url.searchParams.set(k, String(v));
-      }
-    }
-    return url.toString();
+  private buildUrl(path: string): string {
+    return new URL(API_BASE + path, this.cfg.baseUrl).toString();
   }
 
   private async loadSession(file: string): Promise<SessionState | null> {
@@ -222,11 +246,35 @@ export class HouseSigmaClient {
   }
 }
 
-// ----- normalisers ---------------------------------------------------------
-// HouseSigma's response shapes are best-effort here. They wrap responses in
-// { status, data, message } but the `data` shape varies by endpoint and is
-// not officially documented. These normalisers extract what we can and
-// always include the raw payload so callers can still see everything.
+// ---- request signing -------------------------------------------------------
+// Mirrors the bundle's Dm() function:
+//   qs = keys sorted DESC, encodeURIComponent(k)=encodeURIComponent(v),
+//        joined by &, then toLowerCase()
+//   ts = unix seconds (10-char prefix of Date.now())
+//   signature = md5(qs + ts + apiSalt)
+
+function signBody(body: Record<string, unknown>): Record<string, unknown> {
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const qs = Object.keys(body)
+    .sort()
+    .reverse()
+    .map((k) => {
+      const v = body[k];
+      if (v === undefined || v === null) return null;
+      if (typeof v !== "string" && typeof v !== "number") return null;
+      if (typeof v === "number" && Number.isNaN(v)) return null;
+      return `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+    })
+    .filter((x): x is string => x !== null)
+    .join("&")
+    .toLowerCase();
+  const signature = createHash("md5")
+    .update(qs + ts + API_SALT)
+    .digest("hex");
+  return { ...body, ts, signature };
+}
+
+// ---- normalisers -----------------------------------------------------------
 
 function normaliseSearchHits(data: unknown): HSAddressSearchHit[] {
   if (!data) return [];
@@ -234,6 +282,8 @@ function normaliseSearchHits(data: unknown): HSAddressSearchHit[] {
     "list",
     "results",
     "items",
+    "suggest",
+    "suggestions",
     "address",
     "listings",
   ]);
@@ -242,9 +292,9 @@ function normaliseSearchHits(data: unknown): HSAddressSearchHit[] {
     return {
       id_listing: asString(it.id_listing ?? it.id),
       id: asString(it.id),
-      text: asString(it.text ?? it.address_search),
+      text: asString(it.text ?? it.address_search ?? it.label),
       address: asString(it.address),
-      city: asString(it.city),
+      city: asString(it.city ?? it.municipality_name),
       province: asString(it.province),
       postal_code: asString(it.postal_code ?? it.postcode),
       lat: asNumber(it.lat),
@@ -282,7 +332,14 @@ function normaliseListingDetail(
 
 function normaliseHistory(data: unknown): HSListingHistoryEntry[] {
   if (!data) return [];
-  const list = pickArray(data, ["history", "list", "items"]);
+  const d = data as Record<string, unknown>;
+  const source = (d.transaction ?? d.history ?? d) as unknown;
+  const list = pickArray(source, [
+    "transaction",
+    "history",
+    "list",
+    "items",
+  ]);
   return list.map((item) => {
     const it = item as Record<string, unknown>;
     return {
