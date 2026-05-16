@@ -185,18 +185,90 @@ liability — needs careful ToS and human-review tier.
 
 ---
 
-## The single critical question for the founder
+## Founder profile resolved: non-developer / vibes-coder
 
-The research alone determined the niche. Whether you should *take* it
-depends on one variable I cannot answer from outside:
+The founder identifies as a non-developer / vibes-coder. This rules out
+the AI-infra winner (which requires shipping production SDKs and
+out-iterating Browserbase on developer trust — not vibes-codeable).
 
-**Can you ship production-grade TypeScript/Python developer tooling
-yourself?** Specifically: a stable SDK with great types, multi-runtime
-compatibility (Node, Bun, Deno, Python), benchmark harnesses, and
-docs-as-product. If yes — this is the play. If no — the pick shifts to
-**ITAR/EAR compliance** (where domain expertise > coding) or **land
-surveyor plat review** (where vertical credibility > coding) at the cost
-of taking longer and topping out lower.
+### Resolved pick: **Land Surveyor Plat & Legal Description AI** (conf 72/100)
+
+Why this fits the profile:
+
+- **Product is vibes-codeable.** PDF/photo in → redlined plat + closure
+  errors + ALTA Table A check out. Hard part is prompt engineering +
+  domain vocabulary, not SDK infra.
+- **Competition is thin.** Survey XYZ (only real competitor, tiny, no
+  pricing), Bunting Labs (wrong shape, QGIS plugin), DeedPlotter AI
+  (county-clerk side). HeroX ALTA Automation Challenge confirms gap.
+- **Domain is learnable in 90 days.** NSPS guidelines, "The Field
+  Surveyor" YouTube, one state PLS society meeting.
+- **Mandatory license-stamp liability** = non-discretionary pain.
+- **Distribution is community.** Land Surveyors United forum (90k+),
+  state newsletters, POB Magazine. Brand-building compounds for a solo
+  non-dev over 2–3 years.
+- **ACV $300–1,000/mo** × 50k US PLSs × 10% × $6k/yr = $30M ARR floor;
+  $100M+ with international + title companies + RE attorneys.
+
+### Honest outcome distribution (5–7 year horizon)
+
+| Outcome | Probability |
+|---|---|
+| $0–2M ARR | 50% |
+| $10–50M ARR | 25% |
+| $100M+ ARR solo | <5% |
+| Acquisition by Trimble / Bentley / Esri / Procore at $20–80M | ~35% |
+
+This is a **really good business**, not a guaranteed $1B. Eight-figure
+outcomes with a long-tail nine-figure shot. Still more wealth than
+99.99% of founders ever see.
+
+### 14-day validation plan (before any code)
+
+Goal: kill the thesis or sharpen it. No building until day 15.
+
+**Days 1–3 — Learn the workflow.**
+Watch "The Field Surveyor" full archive. Read NSPS Model Standards and
+ALTA/NSPS Land Title Survey requirements (free PDF). Identify the 10
+most painful steps of producing a plat + legal description.
+
+**Days 4–7 — Talk to surveyors.**
+Cold-DM 30 PLSs via Land Surveyors United and state PLS LinkedIn groups
+with one message: *"15-minute Zoom — what's the single most painful
+hour of your week?"* Aim for 8 calls. Do not pitch anything. Ask:
+how long does a plat review take, what tools do you use, what does
+mis-stamping cost, who pays for software, what would they pay $500/mo
+for. Record every answer.
+
+**Days 8–10 — Stress-test capability.**
+Take 5 real recorded plats from county recorder public archives.
+Manually run them through Claude Opus 4.7 with vision + a hand-crafted
+prompt. Measure: does it correctly extract bearings and distances, flag
+closure errors, identify ALTA Table A omissions? If accuracy is <90% on
+the basic mechanical extraction, the thesis is broken — pivot.
+
+**Days 11–12 — Competitive teardown.**
+Sign up for Survey XYZ if possible. Read every Bunting Labs / AirWorks
+blog post. Map exactly what each does and doesn't do. Identify the
+specific feature gap you'll ship as v1.
+
+**Days 13–14 — Decision.**
+Score: (a) did 6+ of 8 surveyors confirm the pain? (b) is the LLM
+accuracy >85% on the mechanical extraction? (c) is there a clear v1
+feature gap? If 3/3 yes — build. If 2/3 — narrow the wedge and re-test.
+If 0–1 — kill and revisit ITAR/EAR or a real-estate-adjacent thesis.
+
+### Alternative if surveying isn't your passion
+
+You appear to have real-estate-adjacent interest (housesigma-mcp + the
+35 Jonathan St offer pitch in this repo's history). Real estate is a
+credible adjacent vertical for the same profile: CMA generation, offer
+drafting, transaction coordination, title curative work. If real estate
+is your true passion not surveying, say so before validating — don't
+spend 5 years on a niche you'll hate. We'd run a fresh research pass
+focused on the Canadian real-estate-tech landscape (Boomtown, Lone Wolf,
+RealtyJuggler, plus AI-first 2024–2026 entrants) and the regulatory
+quirks of TREB/PROPTX/CREA.
 
 ---
 
