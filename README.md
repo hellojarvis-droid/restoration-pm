@@ -15,8 +15,8 @@ Claude Code and Codex CLI as tools.
 |---|---|
 | `search_address` | Free-text address / postal-code search. Returns candidate hits with `id_listing`. |
 | `get_listing` | Full detail for one `id_listing` (price, beds/baths, sqft, MLS#, brokerage, description). |
-| `get_listing_history` | All prior MLS records for a property — list dates, end dates, status (Sold/Terminated/Expired), price changes, days on market. |
-| `get_comparables` | HouseSigma's sold/active comparables for an `id_listing`. |
+| `get_listing_history` | All prior MLS records for a property — list dates, end dates, status (Sold / Terminated / Suspended / Expired), price changes, days on market. |
+| `get_comparables` | HouseSigma's sold/active comparables (`/listing/nearby/sold` + `/listing/nearby/sale`). |
 | `lookup_property` | One-shot: take an address, return top hit + detail + full history. |
 
 ## Setup
@@ -24,17 +24,24 @@ Claude Code and Codex CLI as tools.
 Requires Node.js 20+.
 
 ```bash
+git clone <this repo> ~/.local/share/housesigma-mcp   # any permanent path is fine
+cd ~/.local/share/housesigma-mcp
 npm install
 npm run build
 ```
 
-Create a `.env` (see `.env.example`):
+Create a `.env`. The MCP looks for one in (highest priority first):
+
+1. `$HOUSESIGMA_ENV_FILE`
+2. `$PWD/.env`
+3. `<repo>/.env`             ← simplest: drop it here
+4. `~/.config/housesigma-mcp/.env`
+5. `~/.housesigma-mcp/.env`
 
 ```env
 HOUSESIGMA_EMAIL=you@example.com
 HOUSESIGMA_PASSWORD=...
-# OR, if email/password login fails (e.g. captcha / 2FA / signing changes),
-# paste a live token captured from your browser:
+# OR, if you'd rather paste a bearer token from a logged-in browser session:
 HOUSESIGMA_TOKEN=eyJ...
 ```
 
@@ -44,103 +51,149 @@ Smoke-test:
 node dist/smoke.js "35 Jonathan Street Uxbridge"
 ```
 
-If you get `HouseSigmaError` with HTTP 401/403 or `status: false`, the
-endpoint shape has drifted — see [Network capture](#network-capture) below.
+## Persistent install — works from anywhere
 
-## Install into Claude Code
-
-`~/.config/claude-code/mcp.json` (or your project's `.mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "housesigma": {
-      "command": "node",
-      "args": ["/absolute/path/to/restoration-pm/dist/index.js"],
-      "env": {
-        "HOUSESIGMA_EMAIL": "you@example.com",
-        "HOUSESIGMA_PASSWORD": "..."
-      }
-    }
-  }
-}
-```
-
-Or, equivalently, from the Claude Code CLI:
+### Claude Code (recommended: user scope)
 
 ```bash
-claude mcp add housesigma \
-  -- node /absolute/path/to/restoration-pm/dist/index.js
+claude mcp add --scope user housesigma \
+  node /absolute/path/to/housesigma-mcp/dist/index.js
 ```
 
-Restart Claude Code. The tools appear as `mcp__housesigma__search_address`,
-`mcp__housesigma__get_listing_history`, etc.
+This writes to `~/.claude.json` so the MCP is available in **every** Claude
+Code session, regardless of which project directory you're in. Verify:
 
-## Install into Codex CLI
+```bash
+claude mcp list
+# housesigma: node /abs/path/dist/index.js - ✓ Connected
+```
 
-Codex reads MCP servers from `~/.codex/config.toml`:
+To remove later: `claude mcp remove housesigma -s user`.
+
+### Codex CLI
+
+Edit `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.housesigma]
 command = "node"
-args = ["/absolute/path/to/restoration-pm/dist/index.js"]
-
-[mcp_servers.housesigma.env]
-HOUSESIGMA_EMAIL = "you@example.com"
-HOUSESIGMA_PASSWORD = "..."
+args = ["/absolute/path/to/housesigma-mcp/dist/index.js"]
 ```
 
-Then in any Codex session:
+Then `/mcp` in any Codex session should list `housesigma` as connected.
+
+### Project-scope alternative (for developing the MCP itself)
+
+If you're editing the MCP source and want a Claude Code session inside the
+repo to use *that* working copy, add a `.mcp.json` at the repo root:
+
+```json
+{
+  "mcpServers": {
+    "housesigma": { "command": "node", "args": ["./dist/index.js"] }
+  }
+}
+```
+
+Project scope takes precedence over user scope when both are present, so
+this is the right setup for development.
+
+## How it works (reverse-engineered architecture)
+
+HouseSigma's web app at `https://housesigma.com` calls a private JSON API
+under `/bkv2/api/...`. There is no documented public spec. The bundle at
+`https://housesigma.com/assets/index.*.js` was the source for everything
+below; see `src/housesigma/endpoints.ts` and `src/housesigma/client.ts`.
+
+### Auth (two-step)
+
+1. **Bootstrap.** `POST /init/accesstoken/new` with an empty body returns
+   `{ data: { access_token, secret: { secret_key, ... } } }`. The
+   `access_token` is a guest token; the `secret_key` is the 16-byte AES
+   key for encrypted endpoints.
+2. **Sign in.** `POST /auth/user/signin` with
+   `{ email, pass, login_type: "normal", token: <guest_token> }` and
+   `Authorization: Bearer <guest_token>`. On success the same token is
+   server-side upgraded to a user session — no new bearer is returned.
+
+Required headers on every call: `HS-Client-Type: desktop_v7`,
+`HS-Client-Version: 7.22.2`.
+
+### Request signing
+
+A subset of endpoints (`detail_v2`, `mapsearchv3/*`) need a signed body:
 
 ```
-/mcp
+ts        = floor(Date.now() / 1000)
+qs        = sort(keys(body), DESC) -> "k=v&k=v..." (URI-encoded, lowercased)
+signature = md5(qs + ts + apiSalt)
 ```
 
-…should list `housesigma` as connected.
+`apiSalt` is `ZckdTeV3kGyZd80q` (from `window.Ke.apiSalt`). `signature`
+and `ts` are appended to the body.
 
-## Network capture
+### Request/response encryption
 
-When HouseSigma changes a request shape (eventually they will), here is how
-to update the client without guessing.
+Endpoints in `ENCRYPTED_ENDPOINTS` (`/listing/info/detail_v2` and friends)
+use AES-128-CTR for body, RSA-OAEP-SHA1 for the IV, and gzip on the
+response:
 
-1. Open `https://housesigma.com` in Chrome and log in.
-2. Open **DevTools → Network**, filter `bkv2/api`.
-3. Reproduce the action you want to fix:
-   - Searching an address triggers `…/api/search/address`
-   - Opening a listing triggers `…/api/listing/info` and `…/api/listing/history`
-   - The comparables panel triggers `…/api/listing/comparables`
-4. For each relevant request:
-   - Right-click → **Copy → Copy as cURL (bash)**
-   - Note the path (after `bkv2/api/...`), query parameters, and the
-     `Authorization: Bearer …` header value.
-5. Update `src/housesigma/endpoints.ts` if the path changed, and/or paste
-   the bearer token into `.env` as `HOUSESIGMA_TOKEN` to skip the login flow.
-6. If the response JSON shape changed, update the `normalise*` functions in
-   `src/housesigma/client.ts`. The `raw` field is always included so the
-   model can fall back to the unparsed payload.
+- **Request.** Generate 16 random bytes (`counter`). Encrypt
+  `JSON(body + {hs_request_timestamp: ts})` with `AES-CTR(secretKey, counter)`
+  to get `et_payload`. RSA-OAEP-SHA1-encrypt `counter` with HouseSigma's
+  public key to get `ctr`. Send `{ ctr, et_payload }` (base64) plus the
+  header `Hs-Request-Timestamp: <ts>`.
+- **Response.** `data` is base64. Decode → `AES-CTR(secretKey, counter)`
+  decrypt → `gunzip` → `JSON.parse`.
 
-To dump a full request/response while developing, run with
-`HOUSESIGMA_DEBUG=1`.
+### Per-listing TOS gates
+
+HouseSigma masks data from TREB/PROPTX sources behind per-listing,
+per-section TOS gates. The frontend's gate is invisible Google reCAPTCHA
+v3 — site key `6Lc82-MZAAAAALRrYvLZl3nGEmpEKJNiWy8ep5WP`, action `tos` —
+and the server **does** validate the token (empty / forged tokens return
+`Verification failed`). Acceptance persists on the account once granted,
+but each section of each listing may need its own click-through.
+
+**This MCP cannot bypass the reCAPTCHA.** When data comes back masked
+(`(Agreement required)` strings, MLS numbers like `*********`), open the
+listing in your browser, click the blurred section, and accept the popup.
+Subsequent MCP calls will return un-masked data.
+
+History entries carry a `price_gated: boolean` field so callers can
+detect masked data and prompt accordingly.
+
+## Network capture (when HouseSigma drifts)
+
+The endpoints, salt, and public key may rotate. To refresh:
+
+1. Open `https://housesigma.com` in Chrome, sign in.
+2. DevTools → Network, filter `bkv2/api`.
+3. Reproduce the failing action.
+4. For path changes, update `src/housesigma/endpoints.ts`.
+5. For salt / public key changes, re-extract from the production bundle
+   (`window.Ke.apiSalt`, `window.Ke.pemEncodedKey` — minified to short
+   variable names; grep for the literal string).
+6. Run with `HOUSESIGMA_DEBUG=1` to log every URL hit.
 
 ## Files
 
 ```
 src/
-  index.ts              MCP stdio entrypoint, tool registrations
-  config.ts             .env loader
-  smoke.ts              CLI smoke-test (no MCP)
+  index.ts                MCP stdio entry + 5 tool registrations
+  config.ts               .env loader
+  smoke.ts                CLI smoke-test
   housesigma/
-    client.ts           HTTP client + response normalisers
-    endpoints.ts        Endpoint path catalog
-    types.ts            Response types
+    client.ts             Auth, signing, encryption, normalisers
+    endpoints.ts          Endpoint paths + salt + public key
+    types.ts              Response types
+.mcp.json                 Auto-picked-up Claude Code MCP registration
 ```
 
 ## Known gaps
 
-- Login may fail if HouseSigma adds request signing / captcha; fall back to
-  `HOUSESIGMA_TOKEN` from a browser capture.
-- Response normalisers cover the fields commonly observed in 2024–2026
-  traffic; uncommon fields fall through to `raw`.
+- Cannot solve the reCAPTCHA-gated TREB TOS — user must do that in-browser.
+- `apiSalt`, `HS-Client-Version`, and the RSA public key rotate occasionally.
 - No retry/backoff yet. Add if you hit rate limits.
-- No tests yet — the data source is private; a fixture-based test suite
-  using captured JSON would be the way to add coverage.
+- No tests yet. Fixture-based tests against captured JSON would be the
+  cheapest way to add coverage.

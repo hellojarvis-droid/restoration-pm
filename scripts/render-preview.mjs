@@ -1,0 +1,65 @@
+import { chromium } from "playwright";
+
+const browser = await chromium.launch();
+const ctx = await browser.newContext({
+  viewport: { width: 1100, height: 1400 },
+  deviceScaleFactor: 2,
+});
+const page = await ctx.newPage();
+await page.goto("http://127.0.0.1:8765/index.html", { waitUntil: "networkidle" });
+// Wait for Chart.js to load AND both canvases to have drawn pixels
+await page.waitForFunction(() => typeof window.Chart === "function", { timeout: 30000 });
+await page.waitForFunction(() => {
+  const cs = document.querySelectorAll("canvas");
+  if (cs.length === 0) return false;
+  for (const c of cs) {
+    if (c.width === 0 || c.height === 0) return false;
+  }
+  return true;
+}, { timeout: 30000 });
+await page.waitForTimeout(2500); // allow animation to settle
+
+// Save a full-page screenshot AND a PDF
+await page.screenshot({ path: "/home/user/restoration-pm/pitch/preview-full.png", fullPage: true });
+console.log("[+] wrote preview-full.png");
+
+await page.emulateMedia({ media: "print" });
+await page.pdf({
+  path: "/home/user/restoration-pm/pitch/35-jonathan-offer.pdf",
+  format: "Letter",
+  printBackground: true,
+  margin: { top: "0.4in", right: "0.4in", bottom: "0.4in", left: "0.4in" },
+});
+console.log("[+] wrote 35-jonathan-offer.pdf");
+
+// Also page-by-page screenshots for inline preview (max ~1400px tall each).
+// Re-measure height after switching to print media (chart canvases can grow).
+await page.emulateMedia({ media: "screen" });
+await page.setViewportSize({ width: 1100, height: 800 });
+await page.waitForTimeout(300);
+const h = await page.evaluate(() =>
+  Math.max(
+    document.body.scrollHeight,
+    document.documentElement.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.offsetHeight,
+  ),
+);
+const PER = 1400;
+const pages = Math.ceil(h / PER);
+console.log(`[+] full height: ${h}px -> ${pages} preview slices`);
+
+for (let i = 0; i < pages; i++) {
+  const yOffset = i * PER;
+  const sliceHeight = Math.min(PER, h - yOffset);
+  await page.setViewportSize({ width: 1100, height: sliceHeight });
+  await page.evaluate((y) => window.scrollTo(0, y), yOffset);
+  await page.waitForTimeout(300);
+  await page.screenshot({
+    path: `/home/user/restoration-pm/pitch/preview-${String(i+1).padStart(2,"0")}.png`,
+    fullPage: false,
+  });
+}
+console.log(`[+] wrote ${pages} preview slices`);
+
+await browser.close();

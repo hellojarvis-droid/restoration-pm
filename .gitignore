@@ -5,3 +5,5 @@ dist/
 .DS_Store
 *.log
 .housesigma-session.json
+data/
+pitch/index.html.bak
